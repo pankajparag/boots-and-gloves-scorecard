@@ -36,7 +36,7 @@
   .btn-success { background: var(--green-light); color: var(--green-dark); border: 1px solid #b8dfc8; }
   .btn-success:hover { background: #c8e9d6; }
 
-  .main { padding: 1.5rem 2rem; display: grid; grid-template-columns: 1fr 400px; gap: 1.5rem; max-width: 1400px; margin: 0 auto; }
+  .main { padding: 1.5rem 2rem; display: grid; grid-template-columns: 1fr 420px; gap: 1.5rem; max-width: 1400px; margin: 0 auto; }
   @media(max-width: 960px) { .main { grid-template-columns: 1fr; padding: 1rem; } .setup-panel { padding: 1rem; gap: 1rem; } header { padding: 1rem; } }
 
   .scoreboard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1rem; }
@@ -65,11 +65,9 @@
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; }
   .card-title { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--text); margin-bottom: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; }
   .card-title span { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--text-muted); font-weight: 400; }
-
   .section-label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.5rem; font-weight: 500; }
   .section-divider { border: none; border-top: 1px solid var(--border); margin: 0.8rem 0; }
 
-  /* books */
   .books-section { display: flex; gap: 0.75rem; margin-bottom: 0.9rem; }
   .book-col { flex: 1; }
   .book-col-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; margin-bottom: 5px; display: block; }
@@ -82,42 +80,43 @@
   .book-col.red input { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; border: 2px solid var(--red); border-radius: 6px; padding: 5px 7px; background: var(--red-light); color: var(--red-dark); outline: none; }
   .book-col.black input { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; border: 2px solid #555; border-radius: 6px; padding: 5px 7px; background: var(--black-light); color: #111; outline: none; }
 
-  /* win round */
   .win-row-check { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
   .win-row-check input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--green); cursor: pointer; }
   .win-row-check label { font-size: 0.83rem; cursor: pointer; }
 
-  /* card grids — positive and negative share same layout */
   .entity-card-block { margin-bottom: 0.75rem; }
+  .entity-card-block:last-child { margin-bottom: 0; }
   .entity-card-block-label { font-size: 0.72rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
   .cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
   .card-entry label { font-size: 0.65rem; color: var(--text-muted); display: block; margin-bottom: 2px; }
-  .card-entry input { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 5px; padding: 4px 6px; background: var(--bg); outline: none; }
+  .card-entry input { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 5px; padding: 4px 6px; background: var(--bg); outline: none; color: var(--text); }
   .card-entry input:focus { border-color: var(--gold); }
   .card-entry.danger label { color: var(--red); }
   .card-entry.danger input { border-color: #f5c6c2; background: var(--red-light); }
 
-  /* negative cards section */
-  .neg-section { background: #fff8f7; border: 1px solid #f5c6c2; border-radius: 8px; padding: 0.8rem; margin-bottom: 0.9rem; }
-  .neg-section-title { font-size: 0.72rem; color: var(--red-dark); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-bottom: 0.6rem; display: flex; align-items: center; gap: 6px; }
-  .neg-section-subtitle { font-size: 0.68rem; color: #b07070; margin-bottom: 0.6rem; font-style: italic; }
-  .neg-entity-block { margin-bottom: 0.6rem; }
-  .neg-entity-block:last-child { margin-bottom: 0; }
-  .neg-entity-label { font-size: 0.7rem; font-weight: 500; color: var(--red-dark); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  /* negative section */
+  .neg-section { background: #fff8f7; border: 1px solid #f5c6c2; border-radius: 8px; padding: 0.85rem; margin-bottom: 0.9rem; }
+  .neg-section-title { font-size: 0.72rem; color: var(--red-dark); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-bottom: 0.3rem; }
+  .neg-section-subtitle { font-size: 0.68rem; color: #b07070; margin-bottom: 0.7rem; font-style: italic; }
+  .neg-team-group { margin-bottom: 0.8rem; }
+  .neg-team-group:last-child { margin-bottom: 0; }
+  .neg-team-label { font-size: 0.72rem; font-weight: 500; color: #444; background: #fce8e6; border-radius: 4px; padding: 3px 8px; margin-bottom: 6px; display: inline-block; }
+  .neg-player-block { margin-bottom: 0.6rem; padding-left: 0.5rem; border-left: 2px solid #f5c6c2; }
+  .neg-player-block:last-child { margin-bottom: 0; }
+  .neg-player-label { font-size: 0.68rem; color: var(--red-dark); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; font-weight: 500; }
+  .neg-player-label.went-out { color: var(--green-dark); font-style: italic; }
   .neg-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
   .neg-card-entry label { font-size: 0.62rem; color: #b07070; display: block; margin-bottom: 2px; }
   .neg-card-entry input { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; border: 1px solid #f5c6c2; border-radius: 5px; padding: 4px 6px; background: #fff3f2; color: var(--red-dark); outline: none; }
   .neg-card-entry input:focus { border-color: var(--red); background: var(--red-light); }
 
-  /* round summary */
   .round-summary { background: var(--gold-light); border: 1px solid #e8cc7a; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.9rem; }
-  .round-summary-title { font-size: 0.68rem; color: var(--gold-dark); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; }
+  .round-summary-title { font-size: 0.68rem; color: var(--gold-dark); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
   .rs-row { display: flex; justify-content: space-between; align-items: baseline; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; margin-bottom: 3px; flex-wrap: wrap; gap: 2px; }
   .rs-row .rs-label { color: var(--text-muted); }
   .rs-row .rs-val { font-weight: 500; }
   .rs-breakdown { font-size: 0.65rem; color: var(--text-muted); font-weight: 400; margin-left: 4px; }
 
-  /* status bar */
   .status-bar { display: flex; flex-wrap: wrap; gap: 0.6rem; }
   .status-item { flex: 1; min-width: 80px; background: var(--black-light); border-radius: 7px; padding: 0.6rem 0.75rem; }
   .status-item .s-name { font-size: 0.72rem; font-weight: 500; color: var(--text); margin-bottom: 2px; }
@@ -183,29 +182,22 @@
     <div class="card">
       <div class="card-title">Round <span id="round-number-label">1</span></div>
 
-      <!-- Books -->
       <div class="section-label">Books made</div>
       <div class="books-section" id="books-section"></div>
 
       <hr class="section-divider">
-
-      <!-- Round winner -->
-      <div class="section-label">Round winner</div>
+      <div class="section-label">Who went out?</div>
+      <div style="margin-bottom:0.8rem;font-size:0.7rem;color:var(--text-muted);font-style:italic">One player per round. Leftover fields update automatically.</div>
       <div style="margin-bottom:0.8rem" id="win-round-section"></div>
 
       <hr class="section-divider">
-
-      <!-- Positive card points (winner + everyone) -->
       <div class="section-label">Cards scored (positive)</div>
-      <div style="margin-bottom:0.5rem;font-size:0.7rem;color:var(--text-muted);font-style:italic">Cards melded or played by each player / team</div>
+      <div style="margin-bottom:0.5rem;font-size:0.7rem;color:var(--text-muted);font-style:italic">Cards melded / played by each player or team</div>
       <div style="margin-bottom:0.8rem" id="card-points-section"></div>
 
       <hr class="section-divider">
-
-      <!-- Negative leftover cards -->
       <div id="neg-cards-section"></div>
 
-      <!-- Round summary -->
       <div class="round-summary" id="round-summary"></div>
       <button class="btn btn-success" style="width:100%" onclick="commitRound()">✓ Save round</button>
     </div>
@@ -219,22 +211,22 @@
 
 <script>
 const MELD_IND = [
-  { label: '< 1,000',       min: -Infinity, max: 1000,    meld: 50  },
-  { label: '1,000 – 1,999', min: 1000,      max: 2000,    meld: 90  },
-  { label: '2,000 – 2,999', min: 2000,      max: 3000,    meld: 120 },
-  { label: '3,000 – 3,999', min: 3000,      max: 4000,    meld: 150 },
-  { label: '4,000 – 4,999', min: 4000,      max: 5000,    meld: 180 },
-  { label: '5,000 – 5,999', min: 5000,      max: 6000,    meld: 210 },
-  { label: '≥ 6,000',       min: 6000,      max: Infinity, meld: null, win: true }
+  { label:'< 1,000',       min:-Infinity, max:1000,    meld:50  },
+  { label:'1,000 – 1,999', min:1000,      max:2000,    meld:90  },
+  { label:'2,000 – 2,999', min:2000,      max:3000,    meld:120 },
+  { label:'3,000 – 3,999', min:3000,      max:4000,    meld:150 },
+  { label:'4,000 – 4,999', min:4000,      max:5000,    meld:180 },
+  { label:'5,000 – 5,999', min:5000,      max:6000,    meld:210 },
+  { label:'≥ 6,000',       min:6000,      max:Infinity, meld:null, win:true }
 ];
 const MELD_TEAM = [
-  { label: '< 1,300',        min: -Infinity, max: 1300,    meld: 50  },
-  { label: '1,300 – 2,499',  min: 1300,      max: 2500,    meld: 90  },
-  { label: '2,500 – 4,599',  min: 2500,      max: 4600,    meld: 120 },
-  { label: '4,600 – 7,499',  min: 4600,      max: 7500,    meld: 150 },
-  { label: '7,500 – 8,999',  min: 7500,      max: 9000,    meld: 180 },
-  { label: '9,000 – 9,999',  min: 9000,      max: 10000,   meld: 210 },
-  { label: '≥ 10,000',       min: 10000,     max: Infinity, meld: null, win: true }
+  { label:'< 1,300',        min:-Infinity, max:1300,    meld:50  },
+  { label:'1,300 – 2,499',  min:1300,      max:2500,    meld:90  },
+  { label:'2,500 – 4,599',  min:2500,      max:4600,    meld:120 },
+  { label:'4,600 – 7,499',  min:4600,      max:7500,    meld:150 },
+  { label:'7,500 – 8,999',  min:7500,      max:9000,    meld:180 },
+  { label:'9,000 – 9,999',  min:9000,      max:10000,   meld:210 },
+  { label:'≥ 10,000',       min:10000,     max:Infinity, meld:null, win:true }
 ];
 
 function getBrackets(isTeam) { return isTeam ? MELD_TEAM : MELD_IND; }
@@ -246,20 +238,83 @@ function isTeamMode(m) { return m === 'team2v2' || m === 'team3v3'; }
 
 let game = null;
 
+// ── game structure ──────────────────────────────────────────────────────────
+// game.entities  = score-tracking units (3 players OR 2 teams)
+// game.players   = every individual player with { name, entityIdx }
+//   individual:  players === entities (entityIdx === own index)
+//   team:        players are the 4–6 individuals; entityIdx maps to their team
+
+function buildGame(mode, target) {
+  const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
+  if (mode === 'ind3') {
+    const players = [
+      { name: v('name-P1')||'Player 1', entityIdx: 0 },
+      { name: v('name-P2')||'Player 2', entityIdx: 1 },
+      { name: v('name-P3')||'Player 3', entityIdx: 2 }
+    ];
+    const entities = players.map(p => ({ name: p.name }));
+    return { mode, isTeam: false, target, players, entities, rounds: [], round: 1 };
+  }
+  if (mode === 'team2v2') {
+    const players = [
+      { name: v('name-T1P1')||'T1-P1', entityIdx: 0 },
+      { name: v('name-T1P2')||'T1-P2', entityIdx: 0 },
+      { name: v('name-T2P1')||'T2-P1', entityIdx: 1 },
+      { name: v('name-T2P2')||'T2-P2', entityIdx: 1 }
+    ];
+    const entities = [
+      { name: 'Team 1', players: [players[0].name, players[1].name] },
+      { name: 'Team 2', players: [players[2].name, players[3].name] }
+    ];
+    return { mode, isTeam: true, target, players, entities, rounds: [], round: 1 };
+  }
+  if (mode === 'team3v3') {
+    const players = [
+      { name: v('name-T1P1')||'T1-P1', entityIdx: 0 },
+      { name: v('name-T1P2')||'T1-P2', entityIdx: 0 },
+      { name: v('name-T1P3')||'T1-P3', entityIdx: 0 },
+      { name: v('name-T2P1')||'T2-P1', entityIdx: 1 },
+      { name: v('name-T2P2')||'T2-P2', entityIdx: 1 },
+      { name: v('name-T2P3')||'T2-P3', entityIdx: 1 }
+    ];
+    const entities = [
+      { name: 'Team 1', players: [players[0].name, players[1].name, players[2].name] },
+      { name: 'Team 2', players: [players[3].name, players[4].name, players[5].name] }
+    ];
+    return { mode, isTeam: true, target, players, entities, rounds: [], round: 1 };
+  }
+}
+
+function num(id) { return parseInt(document.getElementById(id)?.value) || 0; }
+function chk(id) { return document.getElementById(id)?.checked || false; }
+function getTotals() {
+  const t = game.entities.map(() => 0);
+  for (const r of game.rounds) r.scores.forEach((s,i) => t[i] += s);
+  return t;
+}
+function checkWinner(totals) {
+  for (let i = 0; i < totals.length; i++) if (totals[i] >= game.target) return i;
+  return -1;
+}
+function gridStyle(n) { return `grid-template-columns: 72px repeat(${n}, 1fr)`; }
+function getOutPlayerIdx() {
+  for (let i = 0; i < game.players.length; i++) if (chk(`out-${i}`)) return i;
+  return -1;
+}
+
+// ── setup UI ────────────────────────────────────────────────────────────────
 function onModeChange() {
   const mode = document.getElementById('game-mode').value;
   document.getElementById('win-target').value = isTeamMode(mode) ? 10000 : 6000;
   renderPlayerNameInputs();
   highlightActiveLink(mode);
 }
-
 function highlightActiveLink(mode) {
   document.querySelectorAll('.game-link').forEach(a => a.classList.remove('active'));
-  const map = { ind3: 'link-ind3', team2v2: 'link-team2v2', team3v3: 'link-team3v3' };
+  const map = { ind3:'link-ind3', team2v2:'link-team2v2', team3v3:'link-team3v3' };
   const el = document.getElementById(map[mode]);
   if (el) el.classList.add('active');
 }
-
 function renderPlayerNameInputs() {
   const mode = document.getElementById('game-mode').value;
   const container = document.getElementById('player-names-setup');
@@ -277,53 +332,23 @@ function renderPlayerNameInputs() {
   }
 }
 
-function getEntities(mode) {
-  const v = id => { const el = document.getElementById(id); return el ? el.value.trim() : ''; };
-  if (mode === 'ind3') return [
-    { id:'P1', name: v('name-P1')||'Player 1' },
-    { id:'P2', name: v('name-P2')||'Player 2' },
-    { id:'P3', name: v('name-P3')||'Player 3' }
-  ];
-  if (mode === 'team2v2') return [
-    { id:'T1', name:'Team 1', players:[v('name-T1P1')||'T1-P1', v('name-T1P2')||'T1-P2'] },
-    { id:'T2', name:'Team 2', players:[v('name-T2P1')||'T2-P1', v('name-T2P2')||'T2-P2'] }
-  ];
-  if (mode === 'team3v3') return [
-    { id:'T1', name:'Team 1', players:[v('name-T1P1')||'T1-P1', v('name-T1P2')||'T1-P2', v('name-T1P3')||'T1-P3'] },
-    { id:'T2', name:'Team 2', players:[v('name-T2P1')||'T2-P1', v('name-T2P2')||'T2-P2', v('name-T2P3')||'T2-P3'] }
-  ];
-}
-
-function num(id) { return parseInt(document.getElementById(id)?.value) || 0; }
-function chk(id) { return document.getElementById(id)?.checked || false; }
-function getTotals() {
-  const t = game.entities.map(() => 0);
-  for (const r of game.rounds) r.scores.forEach((s,i) => t[i] += s);
-  return t;
-}
-function checkWinner(totals) {
-  for (let i = 0; i < totals.length; i++) if (totals[i] >= game.target) return i;
-  return -1;
-}
-function gridStyle(n) { return `grid-template-columns: 72px repeat(${n}, 1fr)`; }
-
 function startGame() {
   const mode = document.getElementById('game-mode').value;
   const target = parseInt(document.getElementById('win-target').value) || 6000;
-  game = { mode, isTeam: isTeamMode(mode), target, entities: getEntities(mode), rounds: [], round: 1 };
+  game = buildGame(mode, target);
   document.getElementById('winner-banner').classList.remove('visible');
   document.getElementById('entry-panel').style.display = 'flex';
   renderAll();
 }
 
+// ── scoreboard ───────────────────────────────────────────────────────────────
 function renderScoreboard() {
   const { entities, rounds, isTeam } = game;
   const n = entities.length;
   let html = `<div class="scoreboard-header" style="${gridStyle(n)}">
     <div>Rd</div>
-    ${entities.map(e => `<div style="text-align:right">${e.name}${e.players ? '<br><span style="font-size:0.62rem;opacity:0.55">'+e.players.join(' / ')+'</span>' : ''}</div>`).join('')}
+    ${entities.map(e => `<div style="text-align:right">${e.name}${e.players?'<br><span style="font-size:0.62rem;opacity:0.55">'+e.players.join(' / ')+'</span>':''}</div>`).join('')}
   </div>`;
-
   if (rounds.length === 0) {
     html += `<div class="empty-state"><div class="big">No rounds yet</div>Enter round 1 on the right</div>`;
   } else {
@@ -362,43 +387,12 @@ function renderMeldTable() {
   document.getElementById('meld-table-wrap').innerHTML = html;
 }
 
-/* ── card input helpers ── */
-function cardPointsHtml(prefix, entities, winnerIdx) {
-  return entities.map((e, i) => {
-    const skip = winnerIdx === i;
-    if (skip) return '';
-    return `<div class="entity-card-block">
-      <div class="entity-card-block-label">${e.name}</div>
-      <div class="cards-grid">
-        <div class="card-entry"><label>Joker ×50</label><input type="number" min="0" value="0" id="${prefix}joker-${i}" onchange="updateRoundSummary()"></div>
-        <div class="card-entry"><label>2 / Ace ×20</label><input type="number" min="0" value="0" id="${prefix}wild-${i}" onchange="updateRoundSummary()"></div>
-        <div class="card-entry"><label>K–10 ×10</label><input type="number" min="0" value="0" id="${prefix}face-${i}" onchange="updateRoundSummary()"></div>
-        <div class="card-entry"><label>9–4 ×5</label><input type="number" min="0" value="0" id="${prefix}low-${i}" onchange="updateRoundSummary()"></div>
-        <div class="card-entry danger"><label>Red 3 −500</label><input type="number" min="0" value="0" id="${prefix}red3-${i}" onchange="updateRoundSummary()"></div>
-        <div class="card-entry"><label>Black 3 (0)</label><input type="number" min="0" value="0" id="${prefix}blk3-${i}"></div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function calcCards(prefix, i) {
-  return num(`${prefix}joker-${i}`) * 50
-       + num(`${prefix}wild-${i}`)  * 20
-       + num(`${prefix}face-${i}`)  * 10
-       + num(`${prefix}low-${i}`)   * 5
-       + num(`${prefix}red3-${i}`)  * -500;
-}
-
-function getWinnerIdx() {
-  for (let i = 0; i < game.entities.length; i++) if (chk(`win-${i}`)) return i;
-  return -1;
-}
-
+// ── entry panel ──────────────────────────────────────────────────────────────
 function renderEntryPanel() {
-  const { entities, round, isTeam } = game;
+  const { entities, players, round, isTeam } = game;
   document.getElementById('round-number-label').textContent = round;
 
-  // Books
+  // Books — per entity (team or individual)
   let booksHtml = `<div class="book-col red"><span class="book-col-label">🔴 Red books (×500)</span>`;
   entities.forEach((e,i) => booksHtml += `<div class="book-entity-row"><span>${e.name}</span><input type="number" min="0" value="0" id="rb-${i}" onchange="updateRoundSummary()"></div>`);
   booksHtml += `</div><div class="book-col black"><span class="book-col-label">⚫ Black books (×300)</span>`;
@@ -406,103 +400,167 @@ function renderEntryPanel() {
   booksHtml += `</div>`;
   document.getElementById('books-section').innerHTML = booksHtml;
 
-  // Win round — selecting winner refreshes neg cards section
+  // Who went out — per individual player
   let winHtml = '';
-  entities.forEach((e,i) => winHtml += `<div class="win-row-check">
-    <input type="checkbox" id="win-${i}" onchange="onWinnerChange(${i})">
-    <label for="win-${i}">🏆 ${e.name} went out</label>
-  </div>`);
+  if (isTeam) {
+    // Group by team for clarity
+    const teams = [...new Set(players.map(p => p.entityIdx))];
+    teams.forEach(ti => {
+      winHtml += `<div style="font-size:0.7rem;color:var(--text-muted);margin-bottom:3px;margin-top:6px">${entities[ti].name}</div>`;
+      players.forEach((p, pi) => {
+        if (p.entityIdx !== ti) return;
+        winHtml += `<div class="win-row-check"><input type="checkbox" id="out-${pi}" onchange="onOutChange(${pi})"><label for="out-${pi}">${p.name}</label></div>`;
+      });
+    });
+  } else {
+    players.forEach((p, pi) => {
+      winHtml += `<div class="win-row-check"><input type="checkbox" id="out-${pi}" onchange="onOutChange(${pi})"><label for="out-${pi}">${p.name}</label></div>`;
+    });
+  }
   document.getElementById('win-round-section').innerHTML = winHtml;
 
-  // Positive card points (all players)
-  document.getElementById('card-points-section').innerHTML = cardPointsHtml('p', entities, -1);
-
-  // Negative leftover section (rendered fresh on winner change)
-  renderNegSection(-1);
-
-  updateRoundSummary();
-}
-
-function onWinnerChange(clickedIdx) {
-  // only one winner — uncheck others
-  game.entities.forEach((_, i) => {
-    if (i !== clickedIdx) { const el = document.getElementById(`win-${i}`); if (el) el.checked = false; }
-  });
-  renderNegSection(clickedIdx);
-  updateRoundSummary();
-}
-
-function renderNegSection(winnerIdx) {
-  const { entities } = game;
-  const losers = entities.filter((_, i) => i !== winnerIdx);
-  const wrap = document.getElementById('neg-cards-section');
-
-  if (winnerIdx < 0 || losers.length === 0) {
-    wrap.innerHTML = `<div class="neg-section">
-      <div class="neg-section-title">⚠ Leftover cards (negative)</div>
-      <div class="neg-section-subtitle">Select who went out above — leftover fields for the other players will appear here.</div>
-    </div>`;
-    return;
-  }
-
-  let html = `<div class="neg-section">
-    <div class="neg-section-title">⚠ Leftover cards (negative)</div>
-    <div class="neg-section-subtitle">Cards still in boot / glove for everyone except ${entities[winnerIdx].name}. Same values, counted as negative.</div>`;
+  // Positive card points — per entity
+  let cpHtml = '';
   entities.forEach((e, i) => {
-    if (i === winnerIdx) return;
-    html += `<div class="neg-entity-block">
-      <div class="neg-entity-label">${e.name} — leftover</div>
-      <div class="neg-cards-grid">
-        <div class="neg-card-entry"><label>Joker (−50)</label><input type="number" min="0" value="0" id="njoker-${i}" onchange="updateRoundSummary()"></div>
-        <div class="neg-card-entry"><label>2 / Ace (−20)</label><input type="number" min="0" value="0" id="nwild-${i}" onchange="updateRoundSummary()"></div>
-        <div class="neg-card-entry"><label>K–10 (−10)</label><input type="number" min="0" value="0" id="nface-${i}" onchange="updateRoundSummary()"></div>
-        <div class="neg-card-entry"><label>9–4 (−5)</label><input type="number" min="0" value="0" id="nlow-${i}" onchange="updateRoundSummary()"></div>
-        <div class="neg-card-entry"><label>Red 3 (−500)</label><input type="number" min="0" value="0" id="nred3-${i}" onchange="updateRoundSummary()"></div>
-        <div class="neg-card-entry"><label>Black 3 (0)</label><input type="number" min="0" value="0" id="nblk3-${i}"></div>
+    cpHtml += `<div class="entity-card-block">
+      <div class="entity-card-block-label">${e.name}</div>
+      <div class="cards-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="card-entry"><label>Joker ×50</label><input type="number" min="0" value="0" id="pjoker-${i}" onchange="updateRoundSummary()"></div>
+        <div class="card-entry"><label>2 / Ace ×20</label><input type="number" min="0" value="0" id="pwild-${i}" onchange="updateRoundSummary()"></div>
+        <div class="card-entry"><label>K–10 ×10</label><input type="number" min="0" value="0" id="pface-${i}" onchange="updateRoundSummary()"></div>
+        <div class="card-entry"><label>9–4 ×5</label><input type="number" min="0" value="0" id="plow-${i}" onchange="updateRoundSummary()"></div>
       </div>
     </div>`;
   });
+  document.getElementById('card-points-section').innerHTML = cpHtml;
+
+  renderNegSection(-1);
+  updateRoundSummary();
+}
+
+function onOutChange(clickedPi) {
+  // Only one player can go out
+  game.players.forEach((_, pi) => {
+    if (pi !== clickedPi) { const el = document.getElementById(`out-${pi}`); if (el) el.checked = false; }
+  });
+  renderNegSection(clickedPi);
+  updateRoundSummary();
+}
+
+function renderNegSection(outPlayerIdx) {
+  const { players, entities, isTeam } = game;
+  const wrap = document.getElementById('neg-cards-section');
+
+  if (outPlayerIdx < 0 || !chk(`out-${outPlayerIdx}`)) {
+    wrap.innerHTML = `<div class="neg-section">
+      <div class="neg-section-title">⚠ Leftover cards (negative)</div>
+      <div class="neg-section-subtitle">Select who went out above — leftover fields for all other players appear here.</div>
+    </div><hr class="section-divider">`;
+    return;
+  }
+
+  const outPlayer = players[outPlayerIdx];
+  let html = `<div class="neg-section">
+    <div class="neg-section-title">⚠ Leftover cards (negative)</div>
+    <div class="neg-section-subtitle">${outPlayer.name} went out — enter cards remaining in every other player's boot / glove.</div>`;
+
+  if (isTeam) {
+    // Group by team
+    const teamIdxs = [...new Set(players.map(p => p.entityIdx))];
+    teamIdxs.forEach(ti => {
+      const teamPlayers = players.map((p,pi) => ({...p, pi})).filter(p => p.entityIdx === ti);
+      const hasLoser = teamPlayers.some(p => p.pi !== outPlayerIdx);
+      if (!hasLoser) return;
+      html += `<div class="neg-team-group"><span class="neg-team-label">${entities[ti].name}</span>`;
+      teamPlayers.forEach(p => {
+        if (p.pi === outPlayerIdx) {
+          html += `<div class="neg-player-block"><div class="neg-player-label went-out">${p.name} — went out (zero leftover)</div></div>`;
+        } else {
+          html += `<div class="neg-player-block">
+            <div class="neg-player-label">${p.name} — leftover</div>
+            <div class="neg-cards-grid">
+              <div class="neg-card-entry"><label>Joker (−50)</label><input type="number" min="0" value="0" id="njoker-${p.pi}" onchange="updateRoundSummary()"></div>
+              <div class="neg-card-entry"><label>2 / Ace (−20)</label><input type="number" min="0" value="0" id="nwild-${p.pi}" onchange="updateRoundSummary()"></div>
+              <div class="neg-card-entry"><label>K–10 (−10)</label><input type="number" min="0" value="0" id="nface-${p.pi}" onchange="updateRoundSummary()"></div>
+              <div class="neg-card-entry"><label>9–3 (−5)</label><input type="number" min="0" value="0" id="nlow-${p.pi}" onchange="updateRoundSummary()"></div>
+              <div class="neg-card-entry"><label>Red 3 (−500)</label><input type="number" min="0" value="0" id="nred3-${p.pi}" onchange="updateRoundSummary()"></div>
+              <div class="neg-card-entry"><label>Black 3 (−5)</label><input type="number" min="0" value="0" id="nblk3-${p.pi}" onchange="updateRoundSummary()"></div>
+            </div>
+          </div>`;
+        }
+      });
+      html += `</div>`;
+    });
+  } else {
+    // Individual — one block per non-winner
+    players.forEach((p, pi) => {
+      if (pi === outPlayerIdx) return;
+      html += `<div class="neg-player-block" style="border-left:none;padding-left:0;margin-bottom:0.7rem">
+        <div class="neg-player-label">${p.name} — leftover</div>
+        <div class="neg-cards-grid">
+          <div class="neg-card-entry"><label>Joker (−50)</label><input type="number" min="0" value="0" id="njoker-${pi}" onchange="updateRoundSummary()"></div>
+          <div class="neg-card-entry"><label>2 / Ace (−20)</label><input type="number" min="0" value="0" id="nwild-${pi}" onchange="updateRoundSummary()"></div>
+          <div class="neg-card-entry"><label>K–10 (−10)</label><input type="number" min="0" value="0" id="nface-${pi}" onchange="updateRoundSummary()"></div>
+          <div class="neg-card-entry"><label>9–3 (−5)</label><input type="number" min="0" value="0" id="nlow-${pi}" onchange="updateRoundSummary()"></div>
+          <div class="neg-card-entry"><label>Red 3 (−500)</label><input type="number" min="0" value="0" id="nred3-${pi}" onchange="updateRoundSummary()"></div>
+          <div class="neg-card-entry"><label>Black 3 (−5)</label><input type="number" min="0" value="0" id="nblk3-${pi}" onchange="updateRoundSummary()"></div>
+        </div>
+      </div>`;
+    });
+  }
+
   html += `</div><hr class="section-divider">`;
   wrap.innerHTML = html;
 }
 
-function calcNegCards(i) {
-  return -(num(`njoker-${i}`) * 50
-         + num(`nwild-${i}`)  * 20
-         + num(`nface-${i}`)  * 10
-         + num(`nlow-${i}`)   * 5
-         + num(`nred3-${i}`)  * 500);
+// ── score calculation ────────────────────────────────────────────────────────
+function calcNegForPlayer(pi) {
+  return -(num(`njoker-${pi}`) * 50
+          + num(`nwild-${pi}`)  * 20
+          + num(`nface-${pi}`)  * 10
+          + num(`nlow-${pi}`)   * 5
+          + num(`nred3-${pi}`)  * 500
+          + num(`nblk3-${pi}`)  * 5);
 }
 
 function calcRoundScores() {
-  const { entities, isTeam } = game;
-  const winnerIdx = getWinnerIdx();
+  const { entities, players, isTeam } = game;
+  const outPi = getOutPlayerIdx();
 
-  // For team games, aggregate per-player negatives into the right team entity
-  // Entity index in team mode = 0 (Team1) or 1 (Team2)
-  // players within each team are sub-players; entity itself has the score slot
-  return entities.map((e, i) => {
-    const rb    = num(`rb-${i}`);
-    const bb    = num(`bb-${i}`);
-    const win   = chk(`win-${i}`) ? 100 : 0;
-    const posCards = calcCards('p', i);
-    const negCards = (winnerIdx >= 0 && i !== winnerIdx) ? calcNegCards(i) : 0;
-    const books = rb * 500 + bb * 300;
-    const total = books + win + posCards + negCards;
-    return { books, win, posCards, negCards, total };
+  // Start with entity-level positives
+  const scores = entities.map((e, ei) => {
+    const rb = num(`rb-${ei}`);
+    const bb = num(`bb-${ei}`);
+    // win round: +100 to the entity that the outgoing player belongs to
+    const win = (outPi >= 0 && players[outPi].entityIdx === ei) ? 100 : 0;
+    const posCards = num(`pjoker-${ei}`) * 50 + num(`pwild-${ei}`) * 20
+                   + num(`pface-${ei}`)  * 10 + num(`plow-${ei}`)  * 5;
+    return { books: rb*500 + bb*300, win, posCards, negCards: 0 };
   });
+
+  // Add per-player negatives rolled up to their entity
+  if (outPi >= 0) {
+    players.forEach((p, pi) => {
+      if (pi === outPi) return;
+      scores[p.entityIdx].negCards += calcNegForPlayer(pi);
+    });
+  }
+
+  scores.forEach(s => s.total = s.books + s.win + s.posCards + s.negCards);
+  return scores;
 }
 
 function updateRoundSummary() {
   const scores = calcRoundScores();
   const totals = getTotals();
-  const winnerIdx = getWinnerIdx();
+  const outPi = getOutPlayerIdx();
   let html = `<div class="round-summary-title">Round preview</div>`;
   scores.forEach((s, i) => {
     const after = totals[i] + s.total;
     const negPart = s.negCards !== 0 ? ` <span style="color:var(--red)">${s.negCards} left</span>` : '';
+    const isWinner = outPi >= 0 && game.players[outPi].entityIdx === i;
     html += `<div class="rs-row">
-      <span class="rs-label">${game.entities[i].name}${i === winnerIdx ? ' 🏆' : ''}</span>
+      <span class="rs-label">${game.entities[i].name}${isWinner?' 🏆':''}</span>
       <span class="rs-val" style="color:${s.total<0?'var(--red)':'var(--green-dark)'}">
         ${s.total>=0?'+':''}${s.total}
         <span class="rs-breakdown">${s.books} bks · ${s.win} win · ${s.posCards} cards${negPart} → ${after.toLocaleString()}</span>
@@ -523,7 +581,7 @@ function renderStatusBar(previewScores) {
     const preview = previewScores ? cur + previewScores[i].total : null;
     html += `<div class="status-item">
       <div class="s-name">${e.name}</div>
-      <div class="s-score">${cur.toLocaleString()}${preview !== null ? ' <span style="font-size:0.8rem;color:var(--text-muted)">→ '+preview.toLocaleString()+'</span>' : ''}</div>
+      <div class="s-score">${cur.toLocaleString()}${preview!==null?' <span style="font-size:0.8rem;color:var(--text-muted)">→ '+preview.toLocaleString()+'</span>':''}</div>
       <div class="s-meld">meld ≥ ${meld!==null?meld:'–'} · win at ${target.toLocaleString()}</div>
     </div>`;
   });
