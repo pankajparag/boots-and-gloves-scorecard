@@ -13,108 +13,109 @@
     --green: #1a6b3a; --green-light: #e8f5ee; --green-dark: #0f3d21;
     --bg: #f7f5f0; --surface: #ffffff; --border: #e0ddd5;
     --text: #1a1a2e; --text-muted: #6b6b80; --text-light: #9999aa;
-    --radius: 10px; --shadow: 0 2px 8px rgba(0,0,0,0.08);
+    --radius: 10px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-  header { background: var(--black); color: white; padding: 1.5rem 2rem; display: flex; align-items: center; justify-content: space-between; }
-  header h1 { font-family: 'Playfair Display', serif; font-size: 1.6rem; letter-spacing: 0.02em; color: var(--gold); }
-  header p { font-size: 0.8rem; color: #aaa; font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
-  .header-right { text-align: right; }
+  header { background: var(--black); color: white; padding: 1.2rem 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; }
+  header h1 { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--gold); }
+  header p { font-size: 0.75rem; color: #aaa; font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
+  .header-links { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; }
+  .game-link { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: #ccc; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 5px; padding: 4px 10px; text-decoration: none; transition: background 0.15s; white-space: nowrap; }
+  .game-link:hover { background: rgba(255,255,255,0.16); color: var(--gold); }
+  .game-link.active { background: rgba(212,160,23,0.18); border-color: var(--gold); color: var(--gold); }
 
-  .setup-panel { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1.2rem 2rem; display: flex; gap: 2rem; align-items: flex-end; flex-wrap: wrap; }
-  .setup-panel label { font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 4px; }
-  .setup-panel select, .setup-panel input[type=number] {
-    font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem;
-    border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px;
-    background: var(--bg); color: var(--text); outline: none;
-  }
+  .setup-panel { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1.1rem 2rem; display: flex; gap: 1.5rem; align-items: flex-end; flex-wrap: wrap; }
+  .setup-panel label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; display: block; margin-bottom: 4px; }
+  .setup-panel select, .setup-panel input[type=number] { font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; background: var(--bg); color: var(--text); outline: none; }
   .setup-panel select:focus, .setup-panel input:focus { border-color: var(--gold); }
   .btn { font-family: 'IBM Plex Sans', sans-serif; font-size: 0.85rem; font-weight: 500; padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; transition: all 0.15s; }
   .btn-primary { background: var(--black); color: var(--gold); }
   .btn-primary:hover { background: var(--black-dark); }
-  .btn-danger { background: var(--red-light); color: var(--red-dark); border: 1px solid #f5c6c2; }
-  .btn-danger:hover { background: #fad5d2; }
   .btn-success { background: var(--green-light); color: var(--green-dark); border: 1px solid #b8dfc8; }
   .btn-success:hover { background: #c8e9d6; }
-  .btn-sm { font-size: 0.78rem; padding: 5px 12px; }
 
-  .main { padding: 1.5rem 2rem; display: grid; grid-template-columns: 1fr 380px; gap: 1.5rem; max-width: 1400px; margin: 0 auto; }
-  @media(max-width: 900px) { .main { grid-template-columns: 1fr; padding: 1rem; } .setup-panel { padding: 1rem; gap: 1rem; } header { padding: 1rem; } }
+  .main { padding: 1.5rem 2rem; display: grid; grid-template-columns: 1fr 390px; gap: 1.5rem; max-width: 1400px; margin: 0 auto; }
+  @media(max-width: 960px) { .main { grid-template-columns: 1fr; padding: 1rem; } .setup-panel { padding: 1rem; gap: 1rem; } header { padding: 1rem; } }
 
-  .scoreboard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-  .scoreboard-header { display: grid; background: var(--black); color: white; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; padding: 0.6rem 1rem; }
-  .score-row { display: grid; padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); align-items: center; font-size: 0.85rem; }
+  .scoreboard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1rem; }
+  .scoreboard-header { display: grid; background: var(--black); color: white; font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; padding: 0.6rem 1rem; }
+  .score-row { display: grid; padding: 0.55rem 1rem; border-bottom: 1px solid var(--border); align-items: center; font-size: 0.85rem; }
   .score-row:last-child { border-bottom: none; }
   .score-row.totals-row { background: var(--gold-light); font-family: 'IBM Plex Mono', monospace; font-weight: 500; border-top: 2px solid var(--gold); }
-  .score-row.winning { background: var(--green-light); }
-  .round-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--text-muted); }
-  .score-val { font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; text-align: right; }
+  .score-row.meld-row { background: #fafaf8; }
+  .round-label { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--text-muted); }
+  .score-val { font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem; text-align: right; }
   .score-val.negative { color: var(--red); }
   .score-val.positive { color: var(--green); }
-  .score-val.total { font-size: 1rem; font-weight: 500; }
-  .meld-badge { font-size: 0.7rem; font-family: 'IBM Plex Mono', monospace; background: var(--gold-light); color: var(--gold-dark); border: 1px solid #e8cc7a; border-radius: 4px; padding: 1px 6px; display: inline-block; }
+  .score-val.total { font-size: 0.95rem; font-weight: 500; }
+  .score-val.winner-col { background: var(--green-light); border-radius: 4px; padding: 1px 4px; }
+  .meld-badge { font-size: 0.68rem; font-family: 'IBM Plex Mono', monospace; background: var(--gold-light); color: var(--gold-dark); border: 1px solid #e8cc7a; border-radius: 4px; padding: 1px 6px; display: inline-block; }
+
+  .meld-table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .meld-table-title { background: var(--black); color: var(--gold); font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; padding: 0.5rem 1rem; letter-spacing: 0.05em; text-transform: uppercase; }
+  .meld-table { width: 100%; border-collapse: collapse; font-family: 'IBM Plex Mono', monospace; font-size: 0.78rem; }
+  .meld-table th { background: #f0ede6; color: var(--text-muted); font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; padding: 5px 10px; text-align: left; border-bottom: 1px solid var(--border); }
+  .meld-table td { padding: 5px 10px; border-bottom: 1px solid var(--border); }
+  .meld-table tr:last-child td { border-bottom: none; }
+  .meld-table tr.active-row td { background: var(--gold-light); font-weight: 500; color: var(--gold-dark); }
 
   .entry-panel { display: flex; flex-direction: column; gap: 1rem; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.2rem; }
-  .card-title { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--text); margin-bottom: 1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.6rem; display: flex; align-items: center; justify-content: space-between; }
-  .card-title span { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--text-muted); font-weight: 400; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.1rem; }
+  .card-title { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--text); margin-bottom: 0.9rem; border-bottom: 1px solid var(--border); padding-bottom: 0.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .card-title span { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; color: var(--text-muted); font-weight: 400; }
 
-  .entry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
-  .entry-field label { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px; }
-  .entry-field input[type=number] { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 0.95rem; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; background: var(--bg); color: var(--text); outline: none; }
-  .entry-field input:focus { border-color: var(--gold); background: var(--gold-light); }
-  .entry-field.full { grid-column: 1 / -1; }
-  .entry-field.book-red input:focus { border-color: var(--red); background: var(--red-light); }
-  .entry-field.book-black input:focus { border-color: #555; background: var(--black-light); }
+  .books-section { display: flex; gap: 0.75rem; margin-bottom: 0.9rem; }
+  .book-col { flex: 1; }
+  .book-col-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 500; margin-bottom: 5px; display: block; }
+  .book-col.red .book-col-label { color: var(--red-dark); }
+  .book-col.black .book-col-label { color: #333; }
+  .book-entity-row { margin-bottom: 4px; }
+  .book-entity-row span { font-size: 0.68rem; display: block; margin-bottom: 2px; }
+  .book-col.red .book-entity-row span { color: var(--red-dark); }
+  .book-col.black .book-entity-row span { color: #555; }
+  .book-col.red input { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; border: 2px solid var(--red); border-radius: 6px; padding: 5px 7px; background: var(--red-light); color: var(--red-dark); outline: none; }
+  .book-col.black input { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 0.9rem; border: 2px solid #555; border-radius: 6px; padding: 5px 7px; background: var(--black-light); color: #111; outline: none; }
 
-  .books-section { display: flex; gap: 0.75rem; }
-  .book-input { flex: 1; }
-  .book-input label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 3px; }
-  .book-input.red label { color: var(--red-dark); }
-  .book-input.black label { color: #444; }
-  .book-input input { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 1rem; border: 2px solid; border-radius: 6px; padding: 6px 8px; outline: none; }
-  .book-input.red input { border-color: var(--red); background: var(--red-light); color: var(--red-dark); }
-  .book-input.black input { border-color: #555; background: var(--black-light); color: #222; }
+  .win-row-check { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+  .win-row-check input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--green); cursor: pointer; }
+  .win-row-check label { font-size: 0.83rem; cursor: pointer; }
 
-  .cards-section h4 { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
-  .cards-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem; }
-  .card-entry label { font-size: 0.68rem; color: var(--text-muted); display: block; margin-bottom: 2px; }
-  .card-entry input { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 0.88rem; border: 1px solid var(--border); border-radius: 5px; padding: 4px 6px; background: var(--bg); outline: none; }
+  .cards-section-title { font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 0.5rem; }
+  .entity-card-block { margin-bottom: 0.7rem; }
+  .entity-card-block-label { font-size: 0.72rem; font-weight: 500; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+  .card-entry label { font-size: 0.65rem; color: var(--text-muted); display: block; margin-bottom: 2px; }
+  .card-entry input { width: 100%; font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 5px; padding: 4px 6px; background: var(--bg); outline: none; }
   .card-entry input:focus { border-color: var(--gold); }
   .card-entry.danger label { color: var(--red); }
   .card-entry.danger input { border-color: #f5c6c2; background: var(--red-light); }
 
-  .win-row-check { display: flex; align-items: center; gap: 8px; padding: 0.5rem 0; }
-  .win-row-check input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--green); cursor: pointer; }
-  .win-row-check label { font-size: 0.85rem; cursor: pointer; }
-
-  .round-summary { background: var(--gold-light); border: 1px solid #e8cc7a; border-radius: 8px; padding: 0.8rem 1rem; }
-  .round-summary-title { font-size: 0.72rem; color: var(--gold-dark); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.4rem; }
-  .round-summary-rows { display: flex; flex-direction: column; gap: 2px; }
-  .rs-row { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; }
+  .round-summary { background: var(--gold-light); border: 1px solid #e8cc7a; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 0.9rem; }
+  .round-summary-title { font-size: 0.68rem; color: var(--gold-dark); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 0.35rem; }
+  .rs-row { display: flex; justify-content: space-between; font-family: 'IBM Plex Mono', monospace; font-size: 0.8rem; margin-bottom: 2px; }
   .rs-row .rs-label { color: var(--text-muted); }
   .rs-row .rs-val { font-weight: 500; }
-  .rs-row.rs-total { border-top: 1px solid #e0cc70; margin-top: 4px; padding-top: 4px; font-size: 0.9rem; }
-  .rs-row.rs-total .rs-val { color: var(--black); }
+  .rs-breakdown { font-size: 0.67rem; color: var(--text-muted); font-weight: 400; margin-left: 6px; }
 
-  .status-bar { display: flex; flex-wrap: wrap; gap: 0.75rem; padding: 0.8rem 1rem; background: var(--black-light); border-radius: 8px; }
-  .status-item { flex: 1; min-width: 80px; }
-  .status-item .s-label { font-size: 0.68rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
-  .status-item .s-val { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; font-weight: 500; color: var(--text); }
-  .status-item .s-meld { font-family: 'IBM Plex Mono', monospace; font-size: 0.75rem; color: var(--gold-dark); }
+  .status-bar { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+  .status-item { flex: 1; min-width: 80px; background: var(--black-light); border-radius: 7px; padding: 0.6rem 0.75rem; }
+  .status-item .s-name { font-size: 0.72rem; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+  .status-item .s-score { font-family: 'IBM Plex Mono', monospace; font-size: 1rem; color: var(--text); }
+  .status-item .s-meld { font-family: 'IBM Plex Mono', monospace; font-size: 0.68rem; color: var(--gold-dark); margin-top: 2px; }
 
-  .winner-banner { display: none; background: var(--green); color: white; text-align: center; padding: 1.5rem; border-radius: var(--radius); font-family: 'Playfair Display', serif; font-size: 1.4rem; }
+  .winner-banner { display: none; background: var(--green); color: white; text-align: center; padding: 1.5rem; border-radius: var(--radius); font-family: 'Playfair Display', serif; font-size: 1.4rem; margin-bottom: 1rem; }
   .winner-banner.visible { display: block; }
 
-  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.9rem; }
-  .empty-state .big { font-family: 'Playfair Display', serif; font-size: 1.1rem; color: var(--text-light); margin-bottom: 0.4rem; }
+  .empty-state { text-align: center; padding: 3rem 1rem; color: var(--text-muted); font-size: 0.88rem; }
+  .empty-state .big { font-family: 'Playfair Display', serif; font-size: 1.05rem; color: var(--text-light); margin-bottom: 0.4rem; }
 
   .player-setup { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-  .player-name-input { font-family: 'IBM Plex Mono', monospace; font-size: 0.85rem; border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; width: 120px; background: var(--bg); }
   .player-label { display: flex; flex-direction: column; gap: 2px; }
-  .player-label span { font-size: 0.7rem; color: var(--text-muted); }
+  .player-label span { font-size: 0.68rem; color: var(--text-muted); }
+  .player-name-input { font-family: 'IBM Plex Mono', monospace; font-size: 0.83rem; border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; width: 115px; background: var(--bg); }
+  .section-divider { border: none; border-top: 1px solid var(--border); margin: 0.7rem 0; }
 </style>
 </head>
 <body>
@@ -124,16 +125,21 @@
     <h1>Boots &amp; Gloves</h1>
     <p>score card</p>
   </div>
-  <div class="header-right" id="game-info-header"></div>
+  <div class="header-links" id="header-links">
+    <span style="font-size:0.7rem;color:#888;font-family:'IBM Plex Mono',monospace">Play online →</span>
+    <a class="game-link" href="https://playingcards.io/dferem" target="_blank" id="link-ind3">Individual 3P</a>
+    <a class="game-link" href="https://playingcards.io/utv8e9" target="_blank" id="link-team2v2">Team 2v2</a>
+    <a class="game-link" href="https://playingcards.io/xv2w4e" target="_blank" id="link-team3v3">Team 3v3</a>
+  </div>
 </header>
 
 <div class="setup-panel">
   <div>
     <label>Game mode</label>
     <select id="game-mode" onchange="onModeChange()">
-      <option value="ind2">Individual — 2 players</option>
-      <option value="ind3" selected>Individual — 3 players</option>
+      <option value="ind3">Individual — 3 players</option>
       <option value="team2v2">Team — 2 v 2</option>
+      <option value="team3v3">Team — 3 v 3</option>
     </select>
   </div>
   <div id="player-names-setup" class="player-setup"></div>
@@ -152,32 +158,29 @@
     <div class="scoreboard" id="scoreboard">
       <div class="empty-state"><div class="big">No game in progress</div>Set up players above and click Start</div>
     </div>
+    <div class="meld-table-wrap" id="meld-table-wrap"></div>
   </div>
   <div class="entry-panel" id="entry-panel" style="display:none">
     <div class="card">
       <div class="card-title">Round <span id="round-number-label">1</span></div>
 
-      <div class="books-section" style="margin-bottom:1rem">
-        <div class="book-input red" id="red-books-section"></div>
-        <div class="book-input black" id="black-books-section"></div>
-      </div>
+      <div class="books-section" id="books-section"></div>
 
-      <div style="margin-bottom:1rem">
-        <div id="win-round-section"></div>
-      </div>
+      <hr class="section-divider">
+      <div style="margin-bottom:0.8rem" id="win-round-section"></div>
 
-      <div class="cards-section" style="margin-bottom:1rem">
-        <h4>Card points</h4>
+      <hr class="section-divider">
+      <div style="margin-bottom:0.8rem">
+        <div class="cards-section-title">Card points</div>
         <div id="card-points-section"></div>
       </div>
 
-      <div class="round-summary" id="round-summary" style="margin-bottom:1rem"></div>
-
+      <div class="round-summary" id="round-summary"></div>
       <button class="btn btn-success" style="width:100%" onclick="commitRound()">✓ Save round</button>
     </div>
 
     <div class="card" style="padding:1rem">
-      <div class="card-title" style="margin-bottom:0.8rem">Scores <span>cumulative</span></div>
+      <div class="card-title" style="margin-bottom:0.8rem">Running totals <span>before this round</span></div>
       <div class="status-bar" id="status-bar"></div>
     </div>
   </div>
@@ -185,34 +188,50 @@
 
 <script>
 const MELD_IND = [
-  { min: -Infinity, max: 1000, meld: 50 },
-  { min: 1000, max: 2000, meld: 90 },
-  { min: 2000, max: 3000, meld: 120 },
-  { min: 3000, max: 4000, meld: 150 },
-  { min: 4000, max: 5000, meld: 180 },
-  { min: 5000, max: Infinity, meld: 210 }
-];
-const MELD_TEAM = [
-  { min: -Infinity, max: 1300, meld: 50 },
-  { min: 1300, max: 2500, meld: 90 },
-  { min: 2500, max: 4600, meld: 120 },
-  { min: 4600, max: 7500, meld: 150 },
-  { min: 7500, max: 10000, meld: 180 },
-  { min: 10000, max: Infinity, meld: 210 }
+  { label: '< 1,000',          min: -Infinity, max: 1000,    meld: 50  },
+  { label: '1,000 – 1,999',    min: 1000,      max: 2000,    meld: 90  },
+  { label: '2,000 – 2,999',    min: 2000,      max: 3000,    meld: 120 },
+  { label: '3,000 – 3,999',    min: 3000,      max: 4000,    meld: 150 },
+  { label: '4,000 – 4,999',    min: 4000,      max: 5000,    meld: 180 },
+  { label: '5,000 – 5,999',    min: 5000,      max: 6000,    meld: 210 },
+  { label: '≥ 6,000',          min: 6000,      max: Infinity, meld: null, win: true }
 ];
 
+const MELD_TEAM = [
+  { label: '< 1,300',          min: -Infinity, max: 1300,    meld: 50  },
+  { label: '1,300 – 2,499',    min: 1300,      max: 2500,    meld: 90  },
+  { label: '2,500 – 4,599',    min: 2500,      max: 4600,    meld: 120 },
+  { label: '4,600 – 7,499',    min: 4600,      max: 7500,    meld: 150 },
+  { label: '7,500 – 8,999',    min: 7500,      max: 9000,    meld: 180 },
+  { label: '9,000 – 9,999',    min: 9000,      max: 10000,   meld: 210 },
+  { label: '≥ 10,000',         min: 10000,     max: Infinity, meld: null, win: true }
+];
+
+function getBrackets(isTeam) { return isTeam ? MELD_TEAM : MELD_IND; }
+
 function getMeld(score, isTeam) {
-  const brackets = isTeam ? MELD_TEAM : MELD_IND;
-  for (const b of brackets) {
-    if (score >= b.min && score < b.max) return b.meld;
+  for (const b of getBrackets(isTeam)) {
+    if (score >= b.min && score < b.max) return b.win ? null : b.meld;
   }
   return 210;
 }
 
+function isTeamMode(mode) { return mode === 'team2v2' || mode === 'team3v3'; }
+
 let game = null;
 
 function onModeChange() {
+  const mode = document.getElementById('game-mode').value;
+  document.getElementById('win-target').value = isTeamMode(mode) ? 10000 : 6000;
   renderPlayerNameInputs();
+  highlightActiveLink(mode);
+}
+
+function highlightActiveLink(mode) {
+  document.querySelectorAll('.game-link').forEach(a => a.classList.remove('active'));
+  const map = { ind3: 'link-ind3', team2v2: 'link-team2v2', team3v3: 'link-team3v3' };
+  const el = document.getElementById(map[mode]);
+  if (el) el.classList.add('active');
 }
 
 function renderPlayerNameInputs() {
@@ -220,9 +239,9 @@ function renderPlayerNameInputs() {
   const container = document.getElementById('player-names-setup');
   container.innerHTML = '';
   const configs = {
-    ind2: [['P1','Player 1'],['P2','Player 2']],
-    ind3: [['P1','Player 1'],['P2','Player 2'],['P3','Player 3']],
-    team2v2: [['T1P1','Team 1 – P1'],['T1P2','Team 1 – P2'],['T2P1','Team 2 – P1'],['T2P2','Team 2 – P2']]
+    ind3:     [['P1','Player 1'],['P2','Player 2'],['P3','Player 3']],
+    team2v2:  [['T1P1','Team 1 – P1'],['T1P2','Team 1 – P2'],['T2P1','Team 2 – P1'],['T2P2','Team 2 – P2']],
+    team3v3:  [['T1P1','T1-P1'],['T1P2','T1-P2'],['T1P3','T1-P3'],['T2P1','T2-P1'],['T2P2','T2-P2'],['T2P3','T2-P3']]
   };
   for (const [id, placeholder] of configs[mode]) {
     const wrap = document.createElement('div');
@@ -232,56 +251,60 @@ function renderPlayerNameInputs() {
   }
 }
 
+function getEntities(mode) {
+  if (mode === 'ind3') {
+    return [
+      { id: 'P1', name: val('name-P1') || 'Player 1' },
+      { id: 'P2', name: val('name-P2') || 'Player 2' },
+      { id: 'P3', name: val('name-P3') || 'Player 3' }
+    ];
+  }
+  if (mode === 'team2v2') {
+    return [
+      { id: 'T1', name: 'Team 1', players: [val('name-T1P1')||'T1-P1', val('name-T1P2')||'T1-P2'] },
+      { id: 'T2', name: 'Team 2', players: [val('name-T2P1')||'T2-P1', val('name-T2P2')||'T2-P2'] }
+    ];
+  }
+  if (mode === 'team3v3') {
+    return [
+      { id: 'T1', name: 'Team 1', players: [val('name-T1P1')||'T1-P1', val('name-T1P2')||'T1-P2', val('name-T1P3')||'T1-P3'] },
+      { id: 'T2', name: 'Team 2', players: [val('name-T2P1')||'T2-P1', val('name-T2P2')||'T2-P2', val('name-T2P3')||'T2-P3'] }
+    ];
+  }
+}
+
+function val(id) { const el = document.getElementById(id); return el ? el.value.trim() : ''; }
+function num(id) { return parseInt(document.getElementById(id)?.value) || 0; }
+function chk(id) { return document.getElementById(id)?.checked || false; }
+
 function startGame() {
   const mode = document.getElementById('game-mode').value;
   const target = parseInt(document.getElementById('win-target').value) || 6000;
-  const isTeam = mode === 'team2v2';
-
-  let entities = [];
-  if (mode === 'ind2') {
-    entities = [
-      { id: 'P1', name: document.getElementById('name-P1').value || 'Player 1' },
-      { id: 'P2', name: document.getElementById('name-P2').value || 'Player 2' }
-    ];
-  } else if (mode === 'ind3') {
-    entities = [
-      { id: 'P1', name: document.getElementById('name-P1').value || 'Player 1' },
-      { id: 'P2', name: document.getElementById('name-P2').value || 'Player 2' },
-      { id: 'P3', name: document.getElementById('name-P3').value || 'Player 3' }
-    ];
-  } else {
-    entities = [
-      { id: 'T1', name: 'Team 1', players: [document.getElementById('name-T1P1').value||'T1-P1', document.getElementById('name-T1P2').value||'T1-P2'] },
-      { id: 'T2', name: 'Team 2', players: [document.getElementById('name-T2P1').value||'T2-P1', document.getElementById('name-T2P2').value||'T2-P2'] }
-    ];
-  }
-
-  game = { mode, isTeam, target, entities, rounds: [], round: 1 };
+  game = { mode, isTeam: isTeamMode(mode), target, entities: getEntities(mode), rounds: [], round: 1 };
   document.getElementById('winner-banner').classList.remove('visible');
   document.getElementById('entry-panel').style.display = 'flex';
   renderAll();
 }
 
-function colCount() {
-  return game.entities.length;
+function getTotals() {
+  const totals = game.entities.map(() => 0);
+  for (const r of game.rounds) r.scores.forEach((s, i) => totals[i] += s);
+  return totals;
 }
 
-function renderAll() {
-  renderScoreboard();
-  renderEntryPanel();
-  renderStatusBar();
-  updateRoundSummary();
+function checkWinner(totals) {
+  for (let i = 0; i < totals.length; i++) if (totals[i] >= game.target) return i;
+  return -1;
 }
+
+function gridStyle(n) { return `grid-template-columns: 72px repeat(${n}, 1fr)`; }
 
 function renderScoreboard() {
-  const sb = document.getElementById('scoreboard');
   const { entities, rounds, isTeam } = game;
   const n = entities.length;
-  const cols = `80px repeat(${n}, 1fr) ${n > 2 ? '' : ''}`;
-
-  let html = `<div class="scoreboard-header" style="grid-template-columns: 80px repeat(${n},1fr)">
-    <div>Round</div>
-    ${entities.map(e => `<div style="text-align:right">${e.name}${isTeam && e.players ? '<br><span style="font-size:0.65rem;opacity:0.6">' + e.players.join(' / ') + '</span>' : ''}</div>`).join('')}
+  let html = `<div class="scoreboard-header" style="${gridStyle(n)}">
+    <div>Rd</div>
+    ${entities.map(e => `<div style="text-align:right">${e.name}${e.players ? '<br><span style="font-size:0.62rem;opacity:0.55">'+e.players.join(' / ')+'</span>' : ''}</div>`).join('')}
   </div>`;
 
   if (rounds.length === 0) {
@@ -289,93 +312,93 @@ function renderScoreboard() {
   } else {
     const totals = entities.map(() => 0);
     for (const r of rounds) {
-      for (let i = 0; i < n; i++) totals[i] += r.scores[i];
-      html += `<div class="score-row" style="grid-template-columns: 80px repeat(${n},1fr)">
+      r.scores.forEach((s, i) => totals[i] += s);
+      html += `<div class="score-row" style="${gridStyle(n)}">
         <div class="round-label">R${r.round}</div>
         ${r.scores.map(s => `<div class="score-val ${s < 0 ? 'negative' : ''}">${s >= 0 ? '+' : ''}${s}</div>`).join('')}
       </div>`;
     }
     const winner = checkWinner(totals);
-    html += `<div class="score-row totals-row" style="grid-template-columns: 80px repeat(${n},1fr)">
+    html += `<div class="score-row totals-row" style="${gridStyle(n)}">
       <div class="round-label" style="font-weight:500">Total</div>
-      ${totals.map((t, i) => `<div class="score-val total ${t < 0 ? 'negative' : 'positive'} ${winner === i ? 'winning' : ''}">${t}</div>`).join('')}
+      ${totals.map((t, i) => `<div class="score-val total ${t < 0 ? 'negative' : 'positive'} ${winner === i ? 'winner-col' : ''}">${t.toLocaleString()}</div>`).join('')}
     </div>`;
-    html += `<div class="score-row" style="grid-template-columns: 80px repeat(${n},1fr); background: #fafaf8">
+    html += `<div class="score-row meld-row" style="${gridStyle(n)}">
       <div class="round-label">Meld</div>
-      ${totals.map(t => `<div style="text-align:right"><span class="meld-badge">≥${getMeld(t, game.isTeam)}</span></div>`).join('')}
+      ${totals.map(t => { const m = getMeld(t, isTeam); return `<div style="text-align:right"><span class="meld-badge">${m !== null ? '≥ ' + m : '🏆 win'}</span></div>`; }).join('')}
     </div>`;
   }
-  sb.innerHTML = html;
+  document.getElementById('scoreboard').innerHTML = html;
 }
 
-function checkWinner(totals) {
-  for (let i = 0; i < totals.length; i++) {
-    if (totals[i] >= game.target) return i;
-  }
-  return -1;
-}
+function renderMeldTable() {
+  const { isTeam, target } = game;
+  const brackets = getBrackets(isTeam);
+  const totals = getTotals();
+  const maxScore = Math.max(...totals, 0);
 
-function getTotals() {
-  const totals = game.entities.map(() => 0);
-  for (const r of game.rounds) {
-    for (let i = 0; i < game.entities.length; i++) totals[i] += r.scores[i];
+  let html = `<div class="meld-table-title">Meld thresholds — ${isTeam ? 'team' : 'individual'} game</div>
+  <table class="meld-table">
+    <thead><tr><th>Score range</th><th>Min. meld</th></tr></thead>
+    <tbody>`;
+  for (const b of brackets) {
+    const isActive = maxScore >= b.min && maxScore < b.max;
+    html += `<tr class="${isActive ? 'active-row' : ''}">
+      <td>${b.label}</td>
+      <td>${b.win ? '🏆 Win!' : b.meld + ' pts'}</td>
+    </tr>`;
   }
-  return totals;
+  html += `</tbody></table>`;
+  document.getElementById('meld-table-wrap').innerHTML = html;
 }
 
 function renderEntryPanel() {
-  const { entities, round, isTeam } = game;
+  const { entities, round } = game;
   document.getElementById('round-number-label').textContent = round;
 
-  // Red / Black books
-  const rbSection = document.getElementById('red-books-section');
-  const bbSection = document.getElementById('black-books-section');
-  rbSection.innerHTML = `<label>🔴 Red books</label>` + entities.map((e,i) =>
-    `<div style="margin-bottom:4px"><span style="font-size:0.7rem;color:#922b21">${e.name}</span>
-     <input type="number" min="0" value="0" id="rb-${i}" onchange="updateRoundSummary()" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:0.95rem;border:2px solid var(--red);border-radius:6px;padding:5px 7px;background:var(--red-light);color:var(--red-dark);outline:none"></div>`
-  ).join('');
-  bbSection.innerHTML = `<label>⚫ Black books</label>` + entities.map((e,i) =>
-    `<div style="margin-bottom:4px"><span style="font-size:0.7rem;color:#333">${e.name}</span>
-     <input type="number" min="0" value="0" id="bb-${i}" onchange="updateRoundSummary()" style="width:100%;font-family:'IBM Plex Mono',monospace;font-size:0.95rem;border:2px solid #555;border-radius:6px;padding:5px 7px;background:var(--black-light);color:#111;outline:none"></div>`
-  ).join('');
+  // Books
+  let booksHtml = `<div class="book-col red"><span class="book-col-label">🔴 Red books (×500)</span>`;
+  entities.forEach((e, i) => booksHtml += `<div class="book-entity-row"><span>${e.name}</span><input type="number" min="0" value="0" id="rb-${i}" onchange="updateRoundSummary()"></div>`);
+  booksHtml += `</div><div class="book-col black"><span class="book-col-label">⚫ Black books (×300)</span>`;
+  entities.forEach((e, i) => booksHtml += `<div class="book-entity-row"><span>${e.name}</span><input type="number" min="0" value="0" id="bb-${i}" onchange="updateRoundSummary()"></div>`);
+  booksHtml += `</div>`;
+  document.getElementById('books-section').innerHTML = booksHtml;
 
   // Win round
-  const wrSection = document.getElementById('win-round-section');
-  wrSection.innerHTML = entities.map((e,i) =>
-    `<div class="win-row-check">
-      <input type="checkbox" id="win-${i}" onchange="updateRoundSummary()">
-      <label for="win-${i}">🏆 ${e.name} won the round (+100)</label>
-    </div>`
-  ).join('');
+  let winHtml = '';
+  entities.forEach((e, i) => winHtml += `<div class="win-row-check"><input type="checkbox" id="win-${i}" onchange="updateRoundSummary()"><label for="win-${i}">🏆 ${e.name} won the round (+100)</label></div>`);
+  document.getElementById('win-round-section').innerHTML = winHtml;
 
-  // Card points — per player/team
-  const cpSection = document.getElementById('card-points-section');
-  cpSection.innerHTML = entities.map((e,i) => `
-    <div style="margin-bottom:0.8rem">
-      <div style="font-size:0.75rem;font-weight:500;color:var(--text-muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.05em">${e.name}</div>
+  // Card points
+  let cpHtml = '';
+  entities.forEach((e, i) => {
+    cpHtml += `<div class="entity-card-block">
+      <div class="entity-card-block-label">${e.name}</div>
       <div class="cards-grid">
-        <div class="card-entry"><label>Joker (×50)</label><input type="number" min="0" value="0" id="joker-${i}" onchange="updateRoundSummary()"></div>
-        <div class="card-entry"><label>2/Ace (×20)</label><input type="number" min="0" value="0" id="wild-${i}" onchange="updateRoundSummary()"></div>
-        <div class="card-entry"><label>K–10 (×10)</label><input type="number" min="0" value="0" id="face-${i}" onchange="updateRoundSummary()"></div>
-        <div class="card-entry"><label>9–4 (×5)</label><input type="number" min="0" value="0" id="low-${i}" onchange="updateRoundSummary()"></div>
-        <div class="card-entry danger"><label>Red 3 (−500)</label><input type="number" min="0" value="0" id="red3-${i}" onchange="updateRoundSummary()"></div>
+        <div class="card-entry"><label>Joker ×50</label><input type="number" min="0" value="0" id="joker-${i}" onchange="updateRoundSummary()"></div>
+        <div class="card-entry"><label>2 / Ace ×20</label><input type="number" min="0" value="0" id="wild-${i}" onchange="updateRoundSummary()"></div>
+        <div class="card-entry"><label>K–10 ×10</label><input type="number" min="0" value="0" id="face-${i}" onchange="updateRoundSummary()"></div>
+        <div class="card-entry"><label>9–4 ×5</label><input type="number" min="0" value="0" id="low-${i}" onchange="updateRoundSummary()"></div>
+        <div class="card-entry danger"><label>Red 3 −500</label><input type="number" min="0" value="0" id="red3-${i}" onchange="updateRoundSummary()"></div>
         <div class="card-entry"><label>Black 3 (0)</label><input type="number" min="0" value="0" id="blk3-${i}"></div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+  });
+  document.getElementById('card-points-section').innerHTML = cpHtml;
+
+  updateRoundSummary();
 }
 
 function calcRoundScores() {
-  const { entities, isTeam } = game;
-  return entities.map((e, i) => {
-    const rb = parseInt(document.getElementById(`rb-${i}`)?.value) || 0;
-    const bb = parseInt(document.getElementById(`bb-${i}`)?.value) || 0;
-    const win = document.getElementById(`win-${i}`)?.checked ? 100 : 0;
-    const joker = parseInt(document.getElementById(`joker-${i}`)?.value) || 0;
-    const wild = parseInt(document.getElementById(`wild-${i}`)?.value) || 0;
-    const face = parseInt(document.getElementById(`face-${i}`)?.value) || 0;
-    const low = parseInt(document.getElementById(`low-${i}`)?.value) || 0;
-    const red3 = parseInt(document.getElementById(`red3-${i}`)?.value) || 0;
+  return game.entities.map((e, i) => {
+    const rb    = num(`rb-${i}`);
+    const bb    = num(`bb-${i}`);
+    const win   = chk(`win-${i}`) ? 100 : 0;
+    const joker = num(`joker-${i}`);
+    const wild  = num(`wild-${i}`);
+    const face  = num(`face-${i}`);
+    const low   = num(`low-${i}`);
+    const red3  = num(`red3-${i}`);
     const books = rb * 500 + bb * 300;
     const cards = joker * 50 + wild * 20 + face * 10 + low * 5 + red3 * -500;
     return { books, win, cards, total: books + win + cards };
@@ -384,61 +407,67 @@ function calcRoundScores() {
 
 function updateRoundSummary() {
   const scores = calcRoundScores();
-  const { entities } = game;
   const totals = getTotals();
-  const summary = document.getElementById('round-summary');
-  let html = `<div class="round-summary-title">Round preview</div><div class="round-summary-rows">`;
-  for (let i = 0; i < entities.length; i++) {
-    const s = scores[i];
-    html += `<div class="rs-row"><span class="rs-label">${entities[i].name}</span>
-      <span class="rs-val" style="color:${s.total < 0 ? 'var(--red)' : 'var(--green-dark)'}">${s.total >= 0 ? '+' : ''}${s.total}
-        <span style="font-size:0.7rem;color:var(--text-muted);font-weight:400"> (${s.books} bks + ${s.win} win + ${s.cards} cards)</span>
-      </span></div>`;
-  }
-  html += `</div>`;
-  summary.innerHTML = html;
+  let html = `<div class="round-summary-title">Round preview</div>`;
+  scores.forEach((s, i) => {
+    const after = totals[i] + s.total;
+    html += `<div class="rs-row">
+      <span class="rs-label">${game.entities[i].name}</span>
+      <span class="rs-val" style="color:${s.total < 0 ? 'var(--red)' : 'var(--green-dark)'}">
+        ${s.total >= 0 ? '+' : ''}${s.total}
+        <span class="rs-breakdown">(${s.books} bks · ${s.win} win · ${s.cards} cards) → ${after.toLocaleString()}</span>
+      </span>
+    </div>`;
+  });
+  document.getElementById('round-summary').innerHTML = html;
   renderStatusBar(scores);
 }
 
 function renderStatusBar(previewScores) {
   const { entities, isTeam, target } = game;
   const totals = getTotals();
-  const bar = document.getElementById('status-bar');
-  bar.innerHTML = entities.map((e, i) => {
+  let html = '';
+  entities.forEach((e, i) => {
     const cur = totals[i];
-    const preview = previewScores ? cur + previewScores[i].total : cur;
     const meld = getMeld(cur, isTeam);
-    return `<div class="status-item">
-      <div class="s-label">${e.name}</div>
-      <div class="s-val">${cur}${previewScores ? ` → <span style="color:${previewScores[i].total>=0?'var(--green)':'var(--red)'}">${preview}</span>` : ''}</div>
-      <div class="s-meld">meld ≥ ${meld} · target ${target}</div>
+    const preview = previewScores ? cur + previewScores[i].total : null;
+    html += `<div class="status-item">
+      <div class="s-name">${e.name}</div>
+      <div class="s-score">${cur.toLocaleString()}${preview !== null ? ' <span style="font-size:0.8rem;color:var(--text-muted)">→ ' + preview.toLocaleString() + '</span>' : ''}</div>
+      <div class="s-meld">meld ≥ ${meld !== null ? meld : '–'} · win at ${target.toLocaleString()}</div>
     </div>`;
-  }).join('');
+  });
+  document.getElementById('status-bar').innerHTML = html;
 }
 
 function commitRound() {
   const scores = calcRoundScores();
   game.rounds.push({ round: game.round, scores: scores.map(s => s.total) });
   game.round++;
-
   const totals = getTotals();
   const winner = checkWinner(totals);
   if (winner >= 0) {
     const banner = document.getElementById('winner-banner');
-    banner.textContent = `🎉 ${game.entities[winner].name} wins with ${totals[winner]} points!`;
+    banner.textContent = `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
     banner.classList.add('visible');
     document.getElementById('entry-panel').style.display = 'none';
   } else {
     renderEntryPanel();
   }
   renderScoreboard();
-  renderStatusBar();
-  updateRoundSummary();
-  document.getElementById('round-number-label').textContent = game.round;
+  renderMeldTable();
   window.scrollTo(0, 0);
 }
 
+function renderAll() {
+  renderScoreboard();
+  renderMeldTable();
+  renderEntryPanel();
+  renderStatusBar();
+}
+
 renderPlayerNameInputs();
+highlightActiveLink('ind3');
 </script>
 </body>
 </html>
