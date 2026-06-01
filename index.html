@@ -36,9 +36,7 @@
   .btn-success{background:var(--green-light);color:var(--green-dark);border:1px solid #b8dfc8;}
   .btn-success:hover{background:#c8e9d6;}
   .btn-saved{background:#ddd;color:#888;border:1px solid #ccc;cursor:default;}
-  .btn-edit{background:var(--gold-light);color:var(--gold-dark);border:1px solid #e8cc7a;font-size:.75rem;padding:4px 10px;}
-  .btn-edit:hover{background:#f0db8a;}
-  .btn-cancel{background:#f0ede6;color:var(--text-muted);border:1px solid var(--border);font-size:.75rem;padding:4px 10px;}
+  .btn-cancel{background:#f0ede6;color:var(--text-muted);border:1px solid var(--border);}
 
   .page{padding:1.5rem 2rem;max-width:1600px;margin:0 auto;}
   @media(max-width:700px){.page{padding:.75rem;}.setup-panel{padding:.75rem;gap:.75rem;}header{padding:1rem;}}
@@ -46,7 +44,6 @@
   .winner-banner{display:none;background:var(--green);color:white;text-align:center;padding:1.5rem;border-radius:var(--radius);font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:1.5rem;}
   .winner-banner.visible{display:block;}
 
-  /* scoreboard */
   .scoreboard-wrap{margin-bottom:1.5rem;}
   .scoreboard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-bottom:1rem;}
   .scoreboard-header{display:grid;background:var(--black);color:white;font-family:'IBM Plex Mono',monospace;font-size:.75rem;padding:.6rem 1rem;}
@@ -55,7 +52,7 @@
   .score-row.totals-row{background:var(--gold-light);font-family:'IBM Plex Mono',monospace;font-weight:500;border-top:2px solid var(--gold);}
   .score-row.meld-row{background:#fafaf8;}
   .score-row.editable-row:hover{background:#f5f3ee;cursor:pointer;}
-  .round-label{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-muted);display:flex;align-items:center;gap:6px;}
+  .round-label{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-muted);display:flex;align-items:center;gap:5px;}
   .score-val{font-family:'IBM Plex Mono',monospace;font-size:.88rem;text-align:right;}
   .score-val.negative{color:var(--red);}
   .score-val.positive{color:var(--green);}
@@ -63,18 +60,26 @@
   .score-val.winner-col{background:var(--green-light);border-radius:4px;padding:1px 4px;}
   .meld-badge{font-size:.68rem;font-family:'IBM Plex Mono',monospace;background:var(--gold-light);color:var(--gold-dark);border:1px solid #e8cc7a;border-radius:4px;padding:1px 6px;display:inline-block;}
 
-  /* history modal */
-  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:center;justify-content:center;}
+  /* modal */
+  .modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;align-items:flex-start;justify-content:center;padding:2rem 1rem;overflow-y:auto;}
   .modal-backdrop.open{display:flex;}
-  .modal{background:var(--surface);border-radius:var(--radius);padding:1.5rem;width:min(520px,95vw);max-height:85vh;overflow-y:auto;}
-  .modal h3{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:1rem;}
-  .modal-field{margin-bottom:.6rem;}
-  .modal-field label{font-size:.7rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:3px;}
-  .modal-field input{font-family:'IBM Plex Mono',monospace;font-size:.9rem;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:100%;background:var(--bg);outline:none;}
+  .modal{background:var(--surface);border-radius:var(--radius);padding:1.5rem;width:min(720px,100%);margin:auto;}
+  .modal h3{font-family:'Playfair Display',serif;font-size:1.1rem;margin-bottom:1rem;padding-bottom:.5rem;border-bottom:1px solid var(--border);}
+  .modal-entity-cols{display:grid;gap:1rem;}
+  .modal-entity{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:1rem;}
+  .modal-entity-title{font-size:.75rem;font-weight:500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem;}
+  .modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+  .modal-field label{font-size:.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em;display:block;margin-bottom:3px;}
+  .modal-field input[type=number]{font-family:'IBM Plex Mono',monospace;font-size:.88rem;border:1px solid var(--border);border-radius:5px;padding:5px 7px;width:100%;background:var(--surface);outline:none;}
   .modal-field input:focus{border-color:var(--gold);}
-  .modal-actions{display:flex;gap:.5rem;margin-top:1rem;justify-content:flex-end;}
+  .modal-field.red-field input{border-color:var(--red);background:var(--red-light);color:var(--red-dark);}
+  .modal-field.neg-field input{border-color:#f5c6c2;background:#fff3f2;color:var(--red-dark);}
+  .modal-field.full{grid-column:1/-1;}
+  .modal-section-label{grid-column:1/-1;font-size:.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;padding-top:.25rem;border-top:1px solid var(--border);margin-top:.25rem;}
+  .modal-check{display:flex;align-items:center;gap:7px;font-size:.82rem;}
+  .modal-check input{width:14px;height:14px;accent-color:var(--green);}
+  .modal-actions{display:flex;gap:.5rem;margin-top:1.25rem;justify-content:flex-end;}
 
-  /* meld table */
   .meld-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
   .meld-table-title{background:var(--black);color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:.72rem;padding:.5rem 1rem;letter-spacing:.05em;text-transform:uppercase;}
   .meld-table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:.78rem;}
@@ -83,7 +88,6 @@
   .meld-table tr:last-child td{border-bottom:none;}
   .meld-table tr.active-row td{background:var(--gold-light);font-weight:500;color:var(--gold-dark);}
 
-  /* entry columns */
   .entry-round-header{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--text);margin-bottom:1rem;padding-bottom:.5rem;border-bottom:2px solid var(--border);}
   .entry-columns{display:grid;gap:1rem;}
   .entity-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;}
@@ -94,7 +98,6 @@
   .entity-col-body{padding:.85rem;flex:1;display:flex;flex-direction:column;gap:.7rem;}
 
   .col-section-label{font-size:.68rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:500;margin-bottom:.35rem;}
-
   .books-row{display:flex;gap:.5rem;}
   .book-field{flex:1;}
   .book-field label{font-size:.65rem;display:block;margin-bottom:3px;font-weight:500;}
@@ -166,10 +169,10 @@
 </div>
 
 <!-- edit modal -->
-<div class="modal-backdrop" id="edit-modal">
+<div class="modal-backdrop" id="edit-modal" onclick="handleModalClick(event)">
   <div class="modal">
     <h3 id="modal-title">Edit Round</h3>
-    <div id="modal-fields"></div>
+    <div class="modal-entity-cols" id="modal-fields"></div>
     <div class="modal-actions">
       <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
       <button class="btn btn-success" onclick="saveEdit()">Save changes</button>
@@ -218,61 +221,65 @@ function getMeld(score,isTeam){
 }
 function isTeamMode(m){return m==='team2v2'||m==='team3v3';}
 
-// ── game state ────────────────────────────────────────────────────────────────
-// game.entities  — score units
-// game.players   — individuals, each with entityIdx
-// game.rounds    — [{round, scores:[...per entity], snapshots:{ei: {rb,bb,win,pos,neg}}}]
-// game.pending   — current round's saved snapshots per entity {ei: scoreObj}
-// game.submitted — which entity indices have hit Save this round
-let game=null;
+// ── breakdown fields definition ───────────────────────────────────────────────
+// Each entity's breakdown stored per round:
+// { rb, bb, wentOut (bool), pjoker, pwild, pface, plow,
+//   nred3, njoker, nwild, nface, nlow, nblk3, total }
+// "wentOut" = true if this entity's player went out that round
 
-function buildGame(mode,target){
-  const v=id=>{const el=document.getElementById(id);return el?el.value.trim():'';};
-  if(mode==='ind3'){
-    const names=[v('name-P1')||'Player 1',v('name-P2')||'Player 2',v('name-P3')||'Player 3'];
-    return{mode,isTeam:false,target,
-      players:names.map((name,i)=>({name,entityIdx:i})),
-      entities:names.map(name=>({name})),
-      rounds:[],round:1,submitted:[],pending:{}};
+function calcTotal(b, isIndWinner) {
+  const books = b.rb*500 + b.bb*300;
+  const win   = b.wentOut ? 100 : 0;
+  const pos   = b.pjoker*50 + b.pwild*20 + b.pface*10 + b.plow*5;
+  const neg   = isIndWinner ? 0
+    : -(b.nred3*500 + b.njoker*50 + b.nwild*20 + b.nface*10 + b.nlow*5 + b.nblk3*5);
+  return books + win + pos + neg;
+}
+
+// ── game state ────────────────────────────────────────────────────────────────
+let game = null;
+
+function buildGame(mode, target) {
+  const v = id => { const el=document.getElementById(id); return el?el.value.trim():''; };
+  if (mode==='ind3') {
+    const names = [v('name-P1')||'Player 1', v('name-P2')||'Player 2', v('name-P3')||'Player 3'];
+    return { mode, isTeam:false, target,
+      players: names.map((name,i)=>({name,entityIdx:i})),
+      entities: names.map(name=>({name})),
+      rounds:[], round:1, submitted:[], pending:{} };
   }
-  if(mode==='team2v2'){
+  if (mode==='team2v2') {
     const pl=[
       {name:v('name-T1P1')||'T1-P1',entityIdx:0},{name:v('name-T1P2')||'T1-P2',entityIdx:0},
       {name:v('name-T2P1')||'T2-P1',entityIdx:1},{name:v('name-T2P2')||'T2-P2',entityIdx:1}
     ];
-    return{mode,isTeam:true,target,players:pl,
+    return { mode, isTeam:true, target, players:pl,
       entities:[{name:'Team 1',players:[pl[0].name,pl[1].name]},{name:'Team 2',players:[pl[2].name,pl[3].name]}],
-      rounds:[],round:1,submitted:[],pending:{}};
+      rounds:[], round:1, submitted:[], pending:{} };
   }
-  if(mode==='team3v3'){
+  if (mode==='team3v3') {
     const pl=[
       {name:v('name-T1P1')||'T1-P1',entityIdx:0},{name:v('name-T1P2')||'T1-P2',entityIdx:0},{name:v('name-T1P3')||'T1-P3',entityIdx:0},
       {name:v('name-T2P1')||'T2-P1',entityIdx:1},{name:v('name-T2P2')||'T2-P2',entityIdx:1},{name:v('name-T2P3')||'T2-P3',entityIdx:1}
     ];
-    return{mode,isTeam:true,target,players:pl,
+    return { mode, isTeam:true, target, players:pl,
       entities:[{name:'Team 1',players:[pl[0].name,pl[1].name,pl[2].name]},{name:'Team 2',players:[pl[3].name,pl[4].name,pl[5].name]}],
-      rounds:[],round:1,submitted:[],pending:{}};
+      rounds:[], round:1, submitted:[], pending:{} };
   }
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 function num(id){const el=document.getElementById(id);return el?(parseInt(el.value)||0):0;}
 function chk(id){const el=document.getElementById(id);return el?el.checked:false;}
-function setVal(id,v){const el=document.getElementById(id);if(el)el.value=v;}
 function getTotals(){
   const t=game.entities.map(()=>0);
-  for(const r of game.rounds) r.scores.forEach((s,i)=>t[i]+=s);
+  for(const r of game.rounds) r.breakdowns.forEach((b,i)=>t[i]+=b.total);
   return t;
 }
-function checkWinner(totals){
-  for(let i=0;i<totals.length;i++) if(totals[i]>=game.target) return i;
-  return -1;
-}
+function checkWinner(totals){for(let i=0;i<totals.length;i++) if(totals[i]>=game.target) return i; return -1;}
 function gridStyle(n){return `grid-template-columns:72px repeat(${n},1fr)`;}
-function getOutPlayerIdx(){
-  for(let i=0;i<game.players.length;i++) if(chk(`out-${i}`)) return i;
-  return -1;
-}
+function getOutPlayerIdx(){for(let i=0;i<game.players.length;i++) if(chk(`out-${i}`)) return i; return -1;}
+function emptyBreakdown(){return{rb:0,bb:0,wentOut:false,pjoker:0,pwild:0,pface:0,plow:0,nred3:0,njoker:0,nwild:0,nface:0,nlow:0,nblk3:0,total:0};}
 
 // ── setup UI ──────────────────────────────────────────────────────────────────
 function onModeChange(){
@@ -283,24 +290,22 @@ function onModeChange(){
 }
 function highlightActiveLink(mode){
   document.querySelectorAll('.game-link').forEach(a=>a.classList.remove('active'));
-  const map={ind3:'link-ind3',team2v2:'link-team2v2',team3v3:'link-team3v3'};
-  const el=document.getElementById(map[mode]);
+  const el=document.getElementById({ind3:'link-ind3',team2v2:'link-team2v2',team3v3:'link-team3v3'}[mode]);
   if(el) el.classList.add('active');
 }
 function renderPlayerNameInputs(){
   const mode=document.getElementById('game-mode').value;
   const container=document.getElementById('player-names-setup');
   container.innerHTML='';
-  // Bug #3 fix: alternate team players T1-P1, T2-P1, T1-P2, T2-P2 ...
   const configs={
     ind3:[['P1','Player 1'],['P2','Player 2'],['P3','Player 3']],
     team2v2:[['T1P1','T1-P1'],['T2P1','T2-P1'],['T1P2','T1-P2'],['T2P2','T2-P2']],
     team3v3:[['T1P1','T1-P1'],['T2P1','T2-P1'],['T1P2','T1-P2'],['T2P2','T2-P2'],['T1P3','T1-P3'],['T2P3','T2-P3']]
   };
-  for(const [id,placeholder] of configs[mode]){
+  for(const [id,ph] of configs[mode]){
     const wrap=document.createElement('div');
     wrap.className='player-label';
-    wrap.innerHTML=`<span>${placeholder}</span><input class="player-name-input" id="name-${id}" placeholder="${placeholder}" value="${placeholder}">`;
+    wrap.innerHTML=`<span>${ph}</span><input class="player-name-input" id="name-${id}" placeholder="${ph}" value="${ph}">`;
     container.appendChild(wrap);
   }
 }
@@ -316,29 +321,29 @@ function startGame(){
 
 // ── scoreboard ────────────────────────────────────────────────────────────────
 function renderScoreboard(){
-  const {entities,rounds,isTeam}=game;
+  const{entities,rounds,isTeam}=game;
   const n=entities.length;
   let html=`<div class="scoreboard-header" style="${gridStyle(n)}">
     <div>Rd</div>
     ${entities.map(e=>`<div style="text-align:right">${e.name}${e.players?'<br><span style="font-size:.62rem;opacity:.55">'+e.players.join(' / ')+'</span>':''}</div>`).join('')}
   </div>`;
-  if(rounds.length===0){
+  if(!rounds.length){
     html+=`<div class="empty-state"><div class="big">No rounds yet</div>Enter round 1 below</div>`;
   } else {
     const totals=entities.map(()=>0);
     for(const r of rounds){
-      r.scores.forEach((s,i)=>totals[i]+=s);
+      r.breakdowns.forEach((b,i)=>totals[i]+=b.total);
       html+=`<div class="score-row editable-row" style="${gridStyle(n)}" onclick="openEditModal(${r.round-1})" title="Click to edit">
         <div class="round-label">R${r.round} <span style="font-size:.6rem;color:var(--gold-dark)">✎</span></div>
-        ${r.scores.map(s=>`<div class="score-val ${s<0?'negative':''}">${s>=0?'+':''}${s}</div>`).join('')}
+        ${r.breakdowns.map(b=>`<div class="score-val ${b.total<0?'negative':''}">${b.total>=0?'+':''}${b.total}</div>`).join('')}
       </div>`;
     }
     const winner=checkWinner(totals);
     html+=`<div class="score-row totals-row" style="${gridStyle(n)}">
       <div class="round-label" style="font-weight:500">Total</div>
       ${totals.map((t,i)=>`<div class="score-val total ${t<0?'negative':'positive'} ${winner===i?'winner-col':''}">${t.toLocaleString()}</div>`).join('')}
-    </div>`;
-    html+=`<div class="score-row meld-row" style="${gridStyle(n)}">
+    </div>
+    <div class="score-row meld-row" style="${gridStyle(n)}">
       <div class="round-label">Meld</div>
       ${totals.map(t=>{const m=getMeld(t,isTeam);return`<div style="text-align:right"><span class="meld-badge">${m!==null?'≥ '+m:'🏆 win'}</span></div>`;}).join('')}
     </div>`;
@@ -348,11 +353,10 @@ function renderScoreboard(){
 
 function renderMeldTable(){
   const{isTeam}=game;
-  const brackets=getBrackets(isTeam);
   const maxScore=Math.max(...getTotals(),0);
   let html=`<div class="meld-table-title">Meld thresholds — ${isTeam?'team':'individual'} game</div>
   <table class="meld-table"><thead><tr><th>Score range</th><th>Min. meld</th></tr></thead><tbody>`;
-  for(const b of brackets){
+  for(const b of getBrackets(isTeam)){
     const active=maxScore>=b.min&&maxScore<b.max;
     html+=`<tr class="${active?'active-row':''}"><td>${b.label}</td><td>${b.win?'🏆 Win!':b.meld+' pts'}</td></tr>`;
   }
@@ -362,39 +366,98 @@ function renderMeldTable(){
 
 // ── edit modal ────────────────────────────────────────────────────────────────
 let editingRoundIdx=null;
+
 function openEditModal(roundIdx){
   editingRoundIdx=roundIdx;
   const r=game.rounds[roundIdx];
   document.getElementById('modal-title').textContent=`Edit Round ${r.round}`;
-  let html='';
-  game.entities.forEach((e,ei)=>{
-    html+=`<div style="margin-bottom:.75rem;padding-bottom:.75rem;border-bottom:1px solid var(--border)">
-      <div style="font-size:.75rem;font-weight:500;color:var(--text-muted);text-transform:uppercase;margin-bottom:.4rem">${e.name}</div>
-      <div class="modal-field"><label>Round score</label>
-        <input type="number" id="edit-score-${ei}" value="${r.scores[ei]}">
+  const n=game.entities.length;
+  document.getElementById('modal-fields').style.gridTemplateColumns=`repeat(${Math.min(n,2)},1fr)`;
+
+  let html=game.entities.map((e,ei)=>{
+    const b=r.breakdowns[ei];
+    // who went out options: players of this entity
+    const myPlayers=game.players.map((p,pi)=>({...p,pi})).filter(p=>p.entityIdx===ei);
+    const wentOutHtml=myPlayers.map(p=>`<div class="modal-check">
+      <input type="checkbox" id="medit-out-${p.pi}" ${b.wentOut&&p.pi===r.outPlayerIdx?'checked':''} onchange="onModalOutChange(${p.pi},${ei})">
+      <label for="medit-out-${p.pi}">${p.name} went out</label>
+    </div>`).join('');
+
+    const isIndWinner=!game.isTeam&&b.wentOut;
+
+    return`<div class="modal-entity">
+      <div class="modal-entity-title">${e.name}${e.players?'<br><span style="font-size:.65rem;opacity:.7">'+e.players.join(' · ')+'</span>':''}</div>
+      <div class="modal-grid">
+        <div class="modal-section-label">Who went out</div>
+        <div style="grid-column:1/-1">${wentOutHtml}</div>
+
+        <div class="modal-section-label">Books</div>
+        <div class="modal-field red-field"><label>🔴 Red books</label><input type="number" min="0" id="medit-rb-${ei}" value="${b.rb}"></div>
+        <div class="modal-field"><label>⚫ Black books</label><input type="number" min="0" id="medit-bb-${ei}" value="${b.bb}"></div>
+
+        <div class="modal-section-label">Positive cards</div>
+        <div class="modal-field"><label>Joker ×50</label><input type="number" min="0" id="medit-pjoker-${ei}" value="${b.pjoker}"></div>
+        <div class="modal-field"><label>2/Ace ×20</label><input type="number" min="0" id="medit-pwild-${ei}" value="${b.pwild}"></div>
+        <div class="modal-field"><label>K–10 ×10</label><input type="number" min="0" id="medit-pface-${ei}" value="${b.pface}"></div>
+        <div class="modal-field"><label>9–4 ×5</label><input type="number" min="0" id="medit-plow-${ei}" value="${b.plow}"></div>
+
+        <div class="modal-section-label">Leftover cards (−)</div>
+        ${isIndWinner
+          ?`<div style="grid-column:1/-1;font-size:.75rem;color:var(--green-dark);font-style:italic">Went out — no leftover</div>`
+          :`<div class="modal-field neg-field"><label>Red 3 −500</label><input type="number" min="0" id="medit-nred3-${ei}" value="${b.nred3}"></div>
+            <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${ei}" value="${b.njoker}"></div>
+            <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${ei}" value="${b.nwild}"></div>
+            <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${ei}" value="${b.nface}"></div>
+            <div class="modal-field neg-field"><label>9–3 −5</label><input type="number" min="0" id="medit-nlow-${ei}" value="${b.nlow}"></div>
+            <div class="modal-field neg-field"><label>Black 3 −5</label><input type="number" min="0" id="medit-nblk3-${ei}" value="${b.nblk3}"></div>`
+        }
       </div>
     </div>`;
-  });
+  }).join('');
   document.getElementById('modal-fields').innerHTML=html;
   document.getElementById('edit-modal').classList.add('open');
 }
-function closeModal(){
-  document.getElementById('edit-modal').classList.remove('open');
-  editingRoundIdx=null;
+
+function onModalOutChange(clickedPi, ei){
+  // Only one player can go out per round — uncheck all others
+  game.players.forEach((_,pi)=>{
+    if(pi!==clickedPi){const el=document.getElementById(`medit-out-${pi}`);if(el) el.checked=false;}
+  });
 }
+
 function saveEdit(){
   if(editingRoundIdx===null) return;
-  game.entities.forEach((_,ei)=>{
-    const val=parseInt(document.getElementById(`edit-score-${ei}`).value)||0;
-    game.rounds[editingRoundIdx].scores[ei]=val;
+  const r=game.rounds[editingRoundIdx];
+  // Find who went out in modal
+  let outPi=-1;
+  game.players.forEach((_,pi)=>{const el=document.getElementById(`medit-out-${pi}`);if(el&&el.checked) outPi=pi;});
+  r.outPlayerIdx=outPi;
+
+  game.entities.forEach((e,ei)=>{
+    const outEi=outPi>=0?game.players[outPi].entityIdx:-1;
+    const isIndWinner=!game.isTeam&&ei===outEi;
+    const mn=id=>{ const el=document.getElementById(`medit-${id}-${ei}`); return el?(parseInt(el.value)||0):0; };
+    const b={
+      rb:mn('rb'), bb:mn('bb'),
+      wentOut: outPi>=0 && game.players[outPi].entityIdx===ei,
+      pjoker:mn('pjoker'), pwild:mn('pwild'), pface:mn('pface'), plow:mn('plow'),
+      nred3: isIndWinner?0:mn('nred3'),
+      njoker:isIndWinner?0:mn('njoker'),
+      nwild: isIndWinner?0:mn('nwild'),
+      nface: isIndWinner?0:mn('nface'),
+      nlow:  isIndWinner?0:mn('nlow'),
+      nblk3: isIndWinner?0:mn('nblk3'),
+    };
+    b.total=calcTotal(b, isIndWinner);
+    r.breakdowns[ei]=b;
   });
   closeModal();
   renderScoreboard();
   renderMeldTable();
 }
-document.getElementById('edit-modal').addEventListener('click',function(e){
-  if(e.target===this) closeModal();
-});
+
+function closeModal(){document.getElementById('edit-modal').classList.remove('open');editingRoundIdx=null;}
+function handleModalClick(e){if(e.target===document.getElementById('edit-modal')) closeModal();}
 
 // ── entry columns ─────────────────────────────────────────────────────────────
 function renderEntryColumns(){
@@ -403,14 +466,16 @@ function renderEntryColumns(){
   const cols=document.getElementById('entry-columns');
   cols.style.gridTemplateColumns=`repeat(${entities.length},1fr)`;
 
+  const outPi=getOutPlayerIdx();
+  const outEi=outPi>=0?players[outPi].entityIdx:-1;
+  const totals=getTotals();
+
   cols.innerHTML=entities.map((e,ei)=>{
     const isSaved=submitted.includes(ei);
-    const totals=getTotals();
     const curScore=totals[ei];
     const meld=getMeld(curScore,isTeam);
-
-    // Players in this entity
     const myPlayers=players.map((p,pi)=>({...p,pi})).filter(p=>p.entityIdx===ei);
+    const isIndWinner=!isTeam&&ei===outEi;
 
     const wentOutHtml=`<div class="went-out-section">
       <div class="col-section-label" style="color:var(--green-dark)">Who went out?</div>
@@ -438,37 +503,23 @@ function renderEntryColumns(){
       </div>
     </div>`;
 
-    // Neg section — always shown; for individual mode, hide inputs if this entity went out
-    const outPi=getOutPlayerIdx();
-    const outEi=outPi>=0?players[outPi].entityIdx:-1;
-    const isIndWinner=!isTeam&&ei===outEi;
-    const negHtml=`<div class="neg-block">
-      <div class="col-section-label">Leftover (−)</div>
-      ${isIndWinner
-        ?`<div class="neg-gone-out">Went out — no leftover</div>`
-        :`<div class="card-grid-3">
+    const negInner=isIndWinner
+      ?`<div class="neg-gone-out">Went out — no leftover</div>`
+      :`<div class="card-grid-2" id="neg-wrap-${ei}">
+          <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
           <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
           <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
           <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
           <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
           <div class="neg-cf"><label>Black 3 −5</label><input type="number" min="0" value="0" id="nblk3-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
-        </div>`
-      }
-    </div>`;
+        </div>`;
+    const negHtml=`<div class="neg-block" id="neg-block-${ei}"><div class="col-section-label">Leftover (−)</div>${negInner}</div>`;
 
-    const previewHtml=`<div class="col-preview" id="preview-${ei}">
-      <div class="prev-total">—</div>
-      <div class="prev-detail">Enter scores above</div>
-    </div>`;
+    const previewHtml=`<div class="col-preview" id="preview-${ei}"><div class="prev-total">—</div><div class="prev-detail">Enter scores above</div></div>`;
 
     const saveHtml=isSaved
       ?`<button class="btn btn-saved" style="width:100%" disabled>✓ Saved — ${e.name}</button>`
       :`<button class="btn btn-success" style="width:100%" onclick="commitEntity(${ei})">✓ Save — ${e.name}</button>`;
-
-    const footerHtml=`<div style="font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-muted);text-align:center">
-      ${curScore.toLocaleString()} pts · meld ≥ ${meld!==null?meld:'–'}
-    </div>`;
 
     return`<div class="entity-col ${isSaved?'col-saved':''}">
       <div class="entity-col-header">
@@ -476,103 +527,103 @@ function renderEntryColumns(){
         ${e.players?`<div class="col-players">${e.players.join(' · ')}</div>`:''}
       </div>
       <div class="entity-col-body">
-        ${wentOutHtml}
-        ${booksHtml}
-        ${posHtml}
-        ${negHtml}
-        ${previewHtml}
+        ${wentOutHtml}${booksHtml}${posHtml}${negHtml}${previewHtml}
         <div style="margin-top:auto;display:flex;flex-direction:column;gap:.4rem">
           ${saveHtml}
-          ${footerHtml}
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-muted);text-align:center">
+            ${curScore.toLocaleString()} pts · meld ≥ ${meld!==null?meld:'–'}
+          </div>
         </div>
       </div>
     </div>`;
   }).join('');
 }
 
-// ── out change: update state, then only patch neg sections + preview ──────────
-// Bug #2 fix: do NOT re-render full columns — that destroys DOM and loses input values.
-// Instead just update the neg section div and the "went out" checkboxes in other cols.
+// ── out change: patch only neg section, don't re-render ───────────────────────
 function onOutChange(clickedPi){
-  // Uncheck all other out checkboxes without re-rendering
   game.players.forEach((_,pi)=>{
     if(pi!==clickedPi){const el=document.getElementById(`out-${pi}`);if(el) el.checked=false;}
   });
-  // Patch each entity's neg section in place
   const outPi=getOutPlayerIdx();
   const outEi=outPi>=0?game.players[outPi].entityIdx:-1;
-  game.entities.forEach((_,ei)=>{
-    if(!game.isTeam){
-      const negWrap=document.getElementById(`neg-wrap-${ei}`);
-      if(negWrap){
-        const isWinner=ei===outEi;
-        negWrap.innerHTML=isWinner
-          ?`<div class="neg-gone-out">Went out — no leftover</div>`
-          :negInputsHtml(ei,game.submitted.includes(ei));
-      }
-    }
-    updateColPreview(ei);
-  });
+  if(!game.isTeam){
+    game.entities.forEach((_,ei)=>{
+      const block=document.getElementById(`neg-block-${ei}`);
+      if(!block) return;
+      const isWinner=ei===outEi;
+      const isSaved=game.submitted.includes(ei);
+      block.innerHTML=`<div class="col-section-label">Leftover (−)</div>`+(isWinner
+        ?`<div class="neg-gone-out">Went out — no leftover</div>`
+        :`<div class="card-grid-2" id="neg-wrap-${ei}">
+            <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>Black 3 −5</label><input type="number" min="0" value="0" id="nblk3-${ei}" ${isSaved?'disabled':''} onchange="updateColPreview(${ei})"></div>
+          </div>`);
+    });
+  }
+  game.entities.forEach((_,ei)=>updateColPreview(ei));
 }
 
-function negInputsHtml(ei,disabled){
-  const d=disabled?'disabled':'';
-  return`<div class="card-grid-3">
-    <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-    <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-    <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-    <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-    <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-    <div class="neg-cf"><label>Black 3 −5</label><input type="number" min="0" value="0" id="nblk3-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-  </div>`;
-}
-
-// Add neg-wrap divs to the neg-block after initial render so we can patch them
-function addNegWraps(){
-  game.entities.forEach((_,ei)=>{
-    const block=document.getElementById(`neg-block-${ei}`);
-    // already handled via id in the HTML template — we'll use a different approach:
-    // wrap the inner content of neg-block with a div id="neg-wrap-{ei}"
-  });
-}
-
-// ── score calc (reads live DOM) ───────────────────────────────────────────────
-function calcEntityScore(ei){
+// ── score calc from live DOM ──────────────────────────────────────────────────
+function readBreakdownFromDOM(ei){
   const outPi=getOutPlayerIdx();
   const outEi=outPi>=0?game.players[outPi].entityIdx:-1;
   const isIndWinner=!game.isTeam&&ei===outEi;
-  const rb=num(`rb-${ei}`),bb=num(`bb-${ei}`);
-  const win=(outPi>=0&&game.players[outPi].entityIdx===ei)?100:0;
-  const pos=num(`pjoker-${ei}`)*50+num(`pwild-${ei}`)*20+num(`pface-${ei}`)*10+num(`plow-${ei}`)*5;
-  const neg=isIndWinner?0:-(num(`njoker-${ei}`)*50+num(`nwild-${ei}`)*20+num(`nface-${ei}`)*10+num(`nlow-${ei}`)*5+num(`nred3-${ei}`)*500+num(`nblk3-${ei}`)*5);
-  const books=rb*500+bb*300;
-  return{books,win,pos,neg,total:books+win+pos+neg};
+  const b={
+    rb:num(`rb-${ei}`), bb:num(`bb-${ei}`),
+    wentOut: outPi>=0&&game.players[outPi].entityIdx===ei,
+    pjoker:num(`pjoker-${ei}`), pwild:num(`pwild-${ei}`),
+    pface:num(`pface-${ei}`), plow:num(`plow-${ei}`),
+    nred3: isIndWinner?0:num(`nred3-${ei}`),
+    njoker:isIndWinner?0:num(`njoker-${ei}`),
+    nwild: isIndWinner?0:num(`nwild-${ei}`),
+    nface: isIndWinner?0:num(`nface-${ei}`),
+    nlow:  isIndWinner?0:num(`nlow-${ei}`),
+    nblk3: isIndWinner?0:num(`nblk3-${ei}`),
+  };
+  b.total=calcTotal(b,isIndWinner);
+  return b;
 }
 
 function updateColPreview(ei){
   const el=document.getElementById(`preview-${ei}`);
   if(!el) return;
-  const s=calcEntityScore(ei);
-  const after=getTotals()[ei]+s.total;
-  const color=s.total<0?'var(--red)':'var(--green-dark)';
-  el.innerHTML=`<div class="prev-total" style="color:${color}">${s.total>=0?'+':''}${s.total} <span style="font-size:.72rem;color:var(--text-muted);font-weight:400">→ ${after.toLocaleString()}</span></div>
-    <div class="prev-detail">${s.books} bks · ${s.win} win · +${s.pos} cards · ${s.neg} left</div>`;
+  const b=readBreakdownFromDOM(ei);
+  const after=getTotals()[ei]+b.total;
+  const color=b.total<0?'var(--red)':'var(--green-dark)';
+  const neg=-(b.nred3*500+b.njoker*50+b.nwild*20+b.nface*10+b.nlow*5+b.nblk3*5);
+  el.innerHTML=`<div class="prev-total" style="color:${color}">${b.total>=0?'+':''}${b.total} <span style="font-size:.72rem;color:var(--text-muted);font-weight:400">→ ${after.toLocaleString()}</span></div>
+    <div class="prev-detail">${b.rb*500+b.bb*300} bks · ${b.wentOut?100:0} win · +${b.pjoker*50+b.pwild*20+b.pface*10+b.plow*5} cards · ${neg} left</div>`;
 }
 
 // ── commit ────────────────────────────────────────────────────────────────────
-// Bug #1 fix: snapshot scores at the time each entity hits Save, so
-// when the last entity saves we use the stored snapshots, not a re-read of
-// potentially stale / cleared DOM inputs.
 function commitEntity(ei){
   if(game.submitted.includes(ei)) return;
-  // Snapshot this entity's score NOW while inputs are still live
-  game.pending[ei]=calcEntityScore(ei).total;
+  // Snapshot the full breakdown now
+  const outPi=getOutPlayerIdx();
+  const breakdown=readBreakdownFromDOM(ei);
+  game.pending[ei]={breakdown, outPi};
   game.submitted.push(ei);
 
   if(game.submitted.length===game.entities.length){
-    // All entities submitted — finalise round using snapshots
-    const scores=game.entities.map((_,i)=>game.pending[i]);
-    game.rounds.push({round:game.round,scores});
+    // Use the outPi from the entity that went out (only one can)
+    let finalOutPi=-1;
+    game.entities.forEach((_,i)=>{if(game.pending[i].outPi>=0) finalOutPi=game.pending[i].outPi;});
+
+    const breakdowns=game.entities.map((_,i)=>{
+      const b=Object.assign({},game.pending[i].breakdown);
+      // Recalc with definitive outPi (in case different columns saved with stale state)
+      const isIndWinner=!game.isTeam&&game.players[finalOutPi]&&game.players[finalOutPi].entityIdx===i;
+      if(isIndWinner){b.nred3=0;b.njoker=0;b.nwild=0;b.nface=0;b.nlow=0;b.nblk3=0;}
+      b.wentOut=finalOutPi>=0&&game.players[finalOutPi].entityIdx===i;
+      b.total=calcTotal(b,isIndWinner);
+      return b;
+    });
+
+    game.rounds.push({round:game.round, outPlayerIdx:finalOutPi, breakdowns});
     game.round++;
     game.submitted=[];
     game.pending={};
@@ -591,22 +642,17 @@ function commitEntity(ei){
     renderMeldTable();
     window.scrollTo(0,0);
   } else {
-    // Grey out this column's save button and disable its inputs
-    const saveBtn=document.querySelector(`[onclick="commitEntity(${ei})"]`);
-    if(saveBtn){saveBtn.className='btn btn-saved';saveBtn.disabled=true;saveBtn.textContent=`✓ Saved — ${game.entities[ei].name}`;}
-    // Disable all inputs in this column
-    ['rb','bb','pjoker','pwild','pface','plow','njoker','nwild','nface','nlow','nred3','nblk3'].forEach(prefix=>{
-      const inp=document.getElementById(`${prefix}-${ei}`);
-      if(inp) inp.disabled=true;
+    // Disable this column's inputs
+    const btn=document.querySelector(`.entity-col:nth-child(${ei+1}) .btn-success`);
+    if(btn){btn.className='btn btn-saved';btn.disabled=true;btn.textContent=`✓ Saved — ${game.entities[ei].name}`;}
+    ['rb','bb','pjoker','pwild','pface','plow','nred3','njoker','nwild','nface','nlow','nblk3'].forEach(p=>{
+      const inp=document.getElementById(`${p}-${ei}`);if(inp) inp.disabled=true;
     });
-    // Also disable the out checkboxes for this entity's players
-    game.players.forEach((p,pi)=>{
-      if(p.entityIdx===ei){const el=document.getElementById(`out-${pi}`);if(el)el.disabled=true;}
-    });
+    game.players.forEach((p,pi)=>{if(p.entityIdx===ei){const el=document.getElementById(`out-${pi}`);if(el) el.disabled=true;}});
+    document.querySelector(`.entity-col:nth-child(${ei+1})`).classList.add('col-saved');
   }
 }
 
-// ── full render ───────────────────────────────────────────────────────────────
 function renderAll(){
   renderScoreboard();
   renderMeldTable();
