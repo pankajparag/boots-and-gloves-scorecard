@@ -42,7 +42,7 @@ function calcTotal(b, isIndWinner) {
   const win   = b.wentOut ? 100 : 0;
   const pos   = b.pjoker * 50 + b.pwild * 20 + b.pface * 10 + b.plow * 5;
   const neg   = isIndWinner ? 0
-    : -(b.nred3 * 500 + b.njoker * 50 + b.nwild * 20 + b.nface * 10 + b.nlow * 5 + b.nblk3 * 5);
+    : -(b.nred3 * 500 + b.njoker * 50 + b.nwild * 20 + b.nface * 10 + b.nlow * 5);
   return books + win + pos + neg;
 }
 
@@ -332,8 +332,7 @@ window.openEditModal = function(roundIdx) {
              <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${ei}" value="${b.njoker}"></div>
              <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${ei}" value="${b.nwild}"></div>
              <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${ei}" value="${b.nface}"></div>
-             <div class="modal-field neg-field"><label>9–3 −5</label><input type="number" min="0" value="${b.nlow}" id="medit-nlow-${ei}"></div>
-             <div class="modal-field neg-field"><label>Black 3 −5</label><input type="number" min="0" id="medit-nblk3-${ei}" value="${b.nblk3}"></div>`
+             <div class="modal-field neg-field"><label>9–3 −5</label><input type="number" min="0" value="${b.nlow}" id="medit-nlow-${ei}"></div>`
         }
       </div>
     </div>`;
@@ -366,7 +365,6 @@ window.saveEdit = async function() {
       nwild:  isIndWinner ? 0 : mn("nwild"),
       nface:  isIndWinner ? 0 : mn("nface"),
       nlow:   isIndWinner ? 0 : mn("nlow"),
-      nblk3:  isIndWinner ? 0 : mn("nblk3"),
     };
     b.total = calcTotal(b, isIndWinner);
     r.breakdowns[ei] = b;
@@ -433,7 +431,6 @@ function renderEntryColumns() {
           <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
           <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
           <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>Black 3 −5</label><input type="number" min="0" value="0" id="nblk3-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
         </div>`;
     const negHtml = `<div class="neg-block" id="neg-block-${ei}"><div class="col-section-label">Leftover (−)</div>${negInner}</div>`;
 
@@ -481,7 +478,6 @@ window.onOutChange = function(clickedPi) {
             <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
             <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
             <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-            <div class="neg-cf"><label>Black 3 −5</label><input type="number" min="0" value="0" id="nblk3-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
           </div>`);
     });
   }
@@ -502,7 +498,6 @@ function readBreakdownFromDOM(ei) {
     nwild:  isIndWinner ? 0 : num(`nwild-${ei}`),
     nface:  isIndWinner ? 0 : num(`nface-${ei}`),
     nlow:   isIndWinner ? 0 : num(`nlow-${ei}`),
-    nblk3:  isIndWinner ? 0 : num(`nblk3-${ei}`),
   };
   b.total = calcTotal(b, isIndWinner);
   return b;
@@ -514,7 +509,7 @@ window.updateColPreview = function(ei) {
   const b = readBreakdownFromDOM(ei);
   const after = getTotals()[ei] + b.total;
   const color = b.total < 0 ? "var(--red)" : "var(--green-dark)";
-  const neg = -(b.nred3 * 500 + b.njoker * 50 + b.nwild * 20 + b.nface * 10 + b.nlow * 5 + b.nblk3 * 5);
+  const neg = -(b.nred3 * 500 + b.njoker * 50 + b.nwild * 20 + b.nface * 10 + b.nlow * 5);
   el.innerHTML = `<div class="prev-total" style="color:${color}">${b.total >= 0 ? "+" : ""}${b.total} <span style="font-size:.72rem;color:var(--text-muted);font-weight:400">→ ${after.toLocaleString()}</span></div>
     <div class="prev-detail">${b.rb*500+b.bb*300} bks · ${b.wentOut?100:0} win · +${b.pjoker*50+b.pwild*20+b.pface*10+b.plow*5} cards · ${neg} left</div>`;
 };
@@ -531,7 +526,7 @@ window.commitEntity = async function(ei) {
     const breakdowns = game.entities.map((_, i) => {
       const b = Object.assign({}, game.pending[i].breakdown);
       const isIndWinner = !game.isTeam && game.players[finalOutPi] && game.players[finalOutPi].entityIdx === i;
-      if (isIndWinner) { b.nred3=0; b.njoker=0; b.nwild=0; b.nface=0; b.nlow=0; b.nblk3=0; }
+      if (isIndWinner) { b.nred3=0; b.njoker=0; b.nwild=0; b.nface=0; b.nlow=0; }
       b.wentOut = finalOutPi >= 0 && game.players[finalOutPi].entityIdx === i;
       b.total = calcTotal(b, isIndWinner);
       return b;
@@ -562,7 +557,7 @@ window.commitEntity = async function(ei) {
     if (col) col.classList.add("col-saved");
     const btn = col ? col.querySelector(".btn-success") : null;
     if (btn) { btn.className = "btn btn-saved"; btn.disabled = true; btn.textContent = `✓ Saved — ${game.entities[ei].name}`; }
-    ["rb","bb","pjoker","pwild","pface","plow","nred3","njoker","nwild","nface","nlow","nblk3"].forEach(p => {
+    ["rb","bb","pjoker","pwild","pface","plow","nred3","njoker","nwild","nface","nlow"].forEach(p => {
       const inp = document.getElementById(`${p}-${ei}`); if (inp) inp.disabled = true;
     });
     game.players.forEach((p, pi) => {
