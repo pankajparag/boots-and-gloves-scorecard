@@ -19,7 +19,7 @@
     <a class="game-link" href="https://playingcards.io/dferem" target="_blank" id="link-ind3">Individual 3P</a>
     <a class="game-link" href="https://playingcards.io/utv8e9" target="_blank" id="link-team2v2">Team 2v2</a>
     <a class="game-link" href="https://playingcards.io/xv2w4e" target="_blank" id="link-team3v3">Team 3v3</a>
-    <span id="sync-status" style="font-family:'IBM Plex Mono',monospace;font-size:.7rem;margin-left:.5rem;color:var(--text-muted)">◌ not connected</span>
+    <span id="sync-status" style="font-family:'IBM Plex Mono',monospace;font-size:.7rem;margin-left:.5rem;color:#6b6b80">◌ not connected</span>
   </div>
 </header>
 
@@ -30,9 +30,29 @@
       <option value="ind3">Individual — 3 players</option>
       <option value="team2v2">Team — 2 v 2</option>
       <option value="team3v3">Team — 3 v 3</option>
+      <option value="custom">Custom scorecard…</option>
     </select>
   </div>
+
+  <!-- Custom game row — shown only when "custom" is selected -->
+  <div id="custom-game-row" style="display:none;gap:0.75rem;align-items:flex-end;flex-wrap:wrap">
+    <div>
+      <label>Layout</label>
+      <select id="custom-mode" onchange="onCustomModeChange()">
+        <option value="ind3">Individual 3P</option>
+        <option value="team2v2">Team 2v2</option>
+        <option value="team3v3">Team 3v3</option>
+      </select>
+    </div>
+    <div>
+      <label>Scorecard name</label>
+      <input type="text" id="custom-game-id" placeholder="e.g. friday1" maxlength="20"
+        style="font-family:'IBM Plex Mono',monospace;font-size:.88rem;border:1px solid var(--border);border-radius:6px;padding:6px 10px;background:var(--bg);color:var(--text);outline:none;width:130px;">
+    </div>
+  </div>
+
   <div id="player-names-setup" class="player-setup"></div>
+
   <div>
     <label>Win target (pts)</label>
     <input type="number" id="win-target" value="6000" step="500" min="1000" style="width:110px">
@@ -40,6 +60,11 @@
   <div>
     <button class="btn btn-primary" onclick="startGame()">Start / Reset game</button>
   </div>
+</div>
+
+<!-- Active game badge -->
+<div id="game-badge" style="background:var(--black);color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:.75rem;padding:.35rem 2rem;display:none">
+  Scorecard: <span id="game-code-display"></span>
 </div>
 
 <!-- edit modal -->

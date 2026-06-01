@@ -3,11 +3,29 @@ import {
   ref, set, onValue, get
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-// ── game ID mapping: mode → Firebase path ─────────────────────────────────────
-const GAME_IDS = {
-  ind3:    "bnag-dferem",
-  team2v2: "bnag-utv8e9",
-  team3v3: "bnag-xv2w4e"
+// ── Firebase paths ────────────────────────────────────────────────────────────
+// Each game mode maps to a fixed Firebase path based on the playingcards.io room code.
+// Structure in Firebase:
+//   games/
+//     bnag-dferem/   ← Individual 3P game
+//     bnag-utv8e9/   ← Team 2v2 game
+//     bnag-xv2w4e/   ← Team 3v3 game
+//     bnag-custom-*/  ← Custom scorecards
+//
+// Each path stores the ENTIRE game state as one JSON object:
+//   { mode, isTeam, target, players, entities, rounds, round }
+//
+// rounds[] is an array of round objects:
+//   { round, outPlayerIdx, breakdowns: [ {rb, bb, wentOut, pjoker, pwild, pface,
+//     plow, nred3, njoker, nwild, nface, nlow, total}, ... ] }
+//
+// Every Save and every Edit overwrites the whole object.
+// All connected phones subscribe via onValue() and re-render on every change.
+
+const FIXED_GAME_IDS = {
+  ind3:    { id: "bnag-dferem",  code: "dferem"  },
+  team2v2: { id: "bnag-utv8e9",  code: "utv8e9"  },
+  team3v3: { id: "bnag-xv2w4e",  code: "xv2w4e"  }
 };
 
 // ── meld brackets ─────────────────────────────────────────────────────────────
@@ -37,6 +55,8 @@ function getMeld(score, isTeam) {
 function isTeamMode(m) { return m === "team2v2" || m === "team3v3"; }
 
 // ── breakdown calc ────────────────────────────────────────────────────────────
+// nlow covers 9–3 (including black 3, which is the same −5 value)
+// nred3 is separate at −500
 function calcTotal(b, isIndWinner) {
   const books = b.rb * 500 + b.bb * 300;
   const win   = b.wentOut ? 100 : 0;
@@ -48,61 +68,62 @@ function calcTotal(b, isIndWinner) {
 
 // ── game state ────────────────────────────────────────────────────────────────
 let game = null;
-let syncUnsubscribe = null; // Firebase listener unsubscribe handle
+let currentGameId = null;   // e.g. "bnag-dferem"
+let currentGameCode = null; // e.g. "dferem"
+let syncUnsubscribe = null;
+let isRemoteUpdate = false; // flag to suppress re-push on incoming Firebase updates
 
-function buildGame(mode, target, playerNames) {
+function buildGame(mode, target, playerNames, gameId, gameCode) {
   const n = id => playerNames[id] || id;
+  const base = { mode, isTeam: isTeamMode(mode), target, gameId, gameCode,
+                 rounds: [], round: 1, submitted: [], pending: {} };
   if (mode === "ind3") {
     const names = [n("P1"), n("P2"), n("P3")];
-    return { mode, isTeam: false, target,
-      players: names.map((name, i) => ({ name, entityIdx: i })),
-      entities: names.map(name => ({ name })),
-      rounds: [], round: 1, submitted: [], pending: {} };
+    return { ...base,
+      players:  names.map((name, i) => ({ name, entityIdx: i })),
+      entities: names.map(name => ({ name })) };
   }
   if (mode === "team2v2") {
     const pl = [
       { name: n("T1P1"), entityIdx: 0 }, { name: n("T1P2"), entityIdx: 0 },
       { name: n("T2P1"), entityIdx: 1 }, { name: n("T2P2"), entityIdx: 1 }
     ];
-    return { mode, isTeam: true, target, players: pl,
-      entities: [
-        { name: "Team 1", players: [pl[0].name, pl[1].name] },
-        { name: "Team 2", players: [pl[2].name, pl[3].name] }
-      ],
-      rounds: [], round: 1, submitted: [], pending: {} };
+    return { ...base, players: pl, entities: [
+      { name: "Team 1", players: [pl[0].name, pl[1].name] },
+      { name: "Team 2", players: [pl[2].name, pl[3].name] }
+    ]};
   }
   if (mode === "team3v3") {
     const pl = [
       { name: n("T1P1"), entityIdx: 0 }, { name: n("T1P2"), entityIdx: 0 }, { name: n("T1P3"), entityIdx: 0 },
       { name: n("T2P1"), entityIdx: 1 }, { name: n("T2P2"), entityIdx: 1 }, { name: n("T2P3"), entityIdx: 1 }
     ];
-    return { mode, isTeam: true, target, players: pl,
-      entities: [
-        { name: "Team 1", players: [pl[0].name, pl[1].name, pl[2].name] },
-        { name: "Team 2", players: [pl[3].name, pl[4].name, pl[5].name] }
-      ],
-      rounds: [], round: 1, submitted: [], pending: {} };
+    return { ...base, players: pl, entities: [
+      { name: "Team 1", players: [pl[0].name, pl[1].name, pl[2].name] },
+      { name: "Team 2", players: [pl[3].name, pl[4].name, pl[5].name] }
+    ]};
   }
 }
 
 // ── Firebase sync ─────────────────────────────────────────────────────────────
-function gameRef() {
-  return ref(db, "games/" + GAME_IDS[game.mode]);
-}
+function gameRef(id) { return ref(db, "games/" + (id || currentGameId)); }
 
-// Push full game state to Firebase (called after every round commit or edit)
 async function pushToFirebase() {
+  if (!currentGameId) return;
+  // Only store what needs to be shared — exclude transient UI state
   const payload = {
     mode:     game.mode,
     isTeam:   game.isTeam,
     target:   game.target,
+    gameId:   game.gameId,
+    gameCode: game.gameCode,
     players:  game.players,
     entities: game.entities,
     rounds:   game.rounds,
     round:    game.round
-    // submitted and pending are transient — not synced
   };
   try {
+    setStatus("syncing");
     await set(gameRef(), payload);
     setStatus("synced");
   } catch (e) {
@@ -111,38 +132,49 @@ async function pushToFirebase() {
   }
 }
 
-// Subscribe to live updates from Firebase
-function subscribeToFirebase(mode) {
-  if (syncUnsubscribe) syncUnsubscribe();
-  const path = ref(db, "games/" + GAME_IDS[mode]);
+function subscribeToFirebase(gameId) {
+  if (syncUnsubscribe) { syncUnsubscribe(); syncUnsubscribe = null; }
+  const path = gameRef(gameId);
   syncUnsubscribe = onValue(path, snapshot => {
+    if (isRemoteUpdate) return; // we just wrote this, skip
     const data = snapshot.val();
-    if (!data) return; // nothing in DB yet
-    // Merge remote state into game, preserving local transient fields
-    const localSubmitted = game ? game.submitted : [];
-    const localPending   = game ? game.pending   : {};
-    game = Object.assign({}, data, { submitted: localSubmitted, pending: localPending });
-    // Restore Infinity (JSON doesn't support it — meld brackets are constants so no issue)
+    if (!data) { setStatus("synced"); return; }
+    // Merge remote state, preserve local transient fields
+    const sub = game ? game.submitted : [];
+    const pen = game ? game.pending   : {};
+    game = { ...data, submitted: sub, pending: pen };
+    currentGameId   = data.gameId   || gameId;
+    currentGameCode = data.gameCode || "";
     setStatus("synced");
+    updateGameCodeDisplay();
     renderAll();
   }, err => {
     setStatus("error");
-    console.error("Firebase read error:", err);
+    console.error("Firebase subscribe error:", err);
   });
 }
 
 function setStatus(state) {
   const el = document.getElementById("sync-status");
   if (!el) return;
-  const states = {
-    synced:      { text: "● synced",       color: "var(--green)" },
-    syncing:     { text: "○ syncing…",     color: "var(--gold-dark)" },
-    error:       { text: "✕ sync error",   color: "var(--red)" },
-    offline:     { text: "◌ local only",   color: "var(--text-muted)" }
-  };
-  const s = states[state] || states.offline;
+  const s = {
+    synced:  { text: "● synced",     color: "#1a6b3a" },
+    syncing: { text: "○ syncing…",   color: "#9a7410" },
+    error:   { text: "✕ sync error", color: "#c0392b" },
+  }[state] || { text: "◌ offline", color: "#6b6b80" };
   el.textContent = s.text;
   el.style.color = s.color;
+}
+
+function updateGameCodeDisplay() {
+  const el    = document.getElementById("game-code-display");
+  const badge = document.getElementById("game-badge");
+  if (el && currentGameCode) {
+    el.textContent = currentGameCode;
+    if (badge) badge.style.display = "block";
+  } else if (badge) {
+    badge.style.display = "none";
+  }
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -164,22 +196,34 @@ function getOutPlayerIdx() {
 }
 
 // ── setup UI ──────────────────────────────────────────────────────────────────
-function onModeChange() {
+window.onModeChange = function() {
   const mode = document.getElementById("game-mode").value;
   document.getElementById("win-target").value = isTeamMode(mode) ? 10000 : 6000;
-  renderPlayerNameInputs();
+  const isCustom = mode === "custom";
+  document.getElementById("custom-game-row").style.display = isCustom ? "flex" : "none";
+  if (!isCustom) renderPlayerNameInputs();
   highlightActiveLink(mode);
-}
-window.onModeChange = onModeChange;
+};
 
 function highlightActiveLink(mode) {
   document.querySelectorAll(".game-link").forEach(a => a.classList.remove("active"));
-  const el = document.getElementById({ ind3:"link-ind3", team2v2:"link-team2v2", team3v3:"link-team3v3" }[mode]);
-  if (el) el.classList.add("active");
+  const fixed = FIXED_GAME_IDS[mode];
+  if (fixed) {
+    const el = document.getElementById("link-" + mode);
+    if (el) el.classList.add("active");
+  }
 }
 
-function renderPlayerNameInputs() {
-  const mode = document.getElementById("game-mode").value;
+window.onCustomModeChange = function() {
+  const sub = document.getElementById("custom-mode").value;
+  renderPlayerNameInputs(sub);
+};
+
+function renderPlayerNameInputs(modeOverride) {
+  const mode = modeOverride || document.getElementById("game-mode").value;
+  const effectiveMode = mode === "custom"
+    ? document.getElementById("custom-mode").value
+    : mode;
   const container = document.getElementById("player-names-setup");
   container.innerHTML = "";
   const configs = {
@@ -187,13 +231,14 @@ function renderPlayerNameInputs() {
     team2v2: [["T1P1","T1-P1"],["T2P1","T2-P1"],["T1P2","T1-P2"],["T2P2","T2-P2"]],
     team3v3: [["T1P1","T1-P1"],["T2P1","T2-P1"],["T1P2","T1-P2"],["T2P2","T2-P2"],["T1P3","T1-P3"],["T2P3","T2-P3"]]
   };
-  for (const [id, ph] of configs[mode]) {
+  for (const [id, ph] of (configs[effectiveMode] || [])) {
     const wrap = document.createElement("div");
     wrap.className = "player-label";
     wrap.innerHTML = `<span id="label-${id}">${ph}</span><input class="player-name-input" id="name-${id}" placeholder="${ph}" value="${ph}" oninput="refreshNameLabels()">`;
     container.appendChild(wrap);
   }
 }
+
 window.refreshNameLabels = function() {
   document.querySelectorAll(".player-name-input").forEach(inp => {
     const id = inp.id.replace("name-", "");
@@ -202,7 +247,7 @@ window.refreshNameLabels = function() {
   });
 };
 
-function getPlayerNames(mode) {
+function getPlayerNames(effectiveMode) {
   const v = id => { const el = document.getElementById("name-" + id); return el ? (el.value.trim() || el.placeholder) : id; };
   const keys = {
     ind3:    ["P1","P2","P3"],
@@ -210,43 +255,74 @@ function getPlayerNames(mode) {
     team3v3: ["T1P1","T1P2","T1P3","T2P1","T2P2","T2P3"]
   };
   const names = {};
-  for (const k of keys[mode]) names[k] = v(k);
+  for (const k of (keys[effectiveMode] || [])) names[k] = v(k);
   return names;
 }
 
-async function startGame() {
-  const mode   = document.getElementById("game-mode").value;
-  const target = parseInt(document.getElementById("win-target").value) || 6000;
-  const names  = getPlayerNames(mode);
+window.startGame = async function() {
+  const modeSelect    = document.getElementById("game-mode").value;
+  const isCustom      = modeSelect === "custom";
+  const effectiveMode = isCustom ? document.getElementById("custom-mode").value : modeSelect;
+  const target        = parseInt(document.getElementById("win-target").value) || 6000;
+  const names         = getPlayerNames(effectiveMode);
 
-  // Check if a game already exists in Firebase for this mode
+  let gameId, gameCode;
+  if (isCustom) {
+    const raw = (document.getElementById("custom-game-id").value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (!raw || raw.length < 3) {
+      alert("Please enter a custom game name (letters and numbers, at least 3 characters).");
+      return;
+    }
+    gameCode = raw;
+    gameId   = "bnag-" + raw;
+  } else {
+    const fixed = FIXED_GAME_IDS[modeSelect];
+    gameId   = fixed.id;
+    gameCode = fixed.code;
+  }
+
+  currentGameId   = gameId;
+  currentGameCode = gameCode;
   setStatus("syncing");
-  const snapshot = await get(ref(db, "games/" + GAME_IDS[mode]));
+
+  // Check for existing game
+  let snapshot;
+  try {
+    snapshot = await get(gameRef(gameId));
+  } catch (e) {
+    setStatus("error");
+    alert("Could not connect to Firebase. Check your connection.");
+    return;
+  }
+
   if (snapshot.exists()) {
     const existing = snapshot.val();
-    const confirm = window.confirm(
-      `A game is already in progress (Round ${existing.round}, started with players: ` +
-      `${existing.players.map(p => p.name).join(", ")}).\n\nStart fresh? (OK = new game, Cancel = resume existing)`
+    const resume = window.confirm(
+      `A game "${gameCode}" already exists (Round ${existing.round}, players: ${existing.players.map(p => p.name).join(", ")}).\n\nCancel = resume existing · OK = start fresh`
     );
-    if (!confirm) {
-      // Resume: just subscribe and let Firebase push the existing state
-      game = Object.assign({}, existing, { submitted: [], pending: {} });
-      subscribeToFirebase(mode);
+    if (!resume) {
+      game = { ...existing, submitted: [], pending: [] };
+      subscribeToFirebase(gameId);
       document.getElementById("winner-banner").classList.remove("visible");
       document.getElementById("entry-area").style.display = "block";
+      updateGameCodeDisplay();
       renderAll();
       return;
     }
   }
 
-  game = buildGame(mode, target, names);
+  game = buildGame(effectiveMode, target, names, gameId, gameCode);
   document.getElementById("winner-banner").classList.remove("visible");
   document.getElementById("entry-area").style.display = "block";
+  updateGameCodeDisplay();
+
+  isRemoteUpdate = true;
   await pushToFirebase();
-  subscribeToFirebase(mode);
+  isRemoteUpdate = false;
+
+  subscribeToFirebase(gameId);
   renderAll();
-}
-window.startGame = startGame;
+};
 
 // ── scoreboard ────────────────────────────────────────────────────────────────
 function renderScoreboard() {
@@ -300,8 +376,7 @@ window.openEditModal = function(roundIdx) {
   editingRoundIdx = roundIdx;
   const r = game.rounds[roundIdx];
   document.getElementById("modal-title").textContent = `Edit Round ${r.round}`;
-  const n = game.entities.length;
-  document.getElementById("modal-fields").style.gridTemplateColumns = `repeat(${Math.min(n, 2)}, 1fr)`;
+  document.getElementById("modal-fields").style.gridTemplateColumns = `repeat(${Math.min(game.entities.length, 2)}, 1fr)`;
 
   document.getElementById("modal-fields").innerHTML = game.entities.map((e, ei) => {
     const b = r.breakdowns[ei];
@@ -325,14 +400,14 @@ window.openEditModal = function(roundIdx) {
         <div class="modal-field"><label>2/Ace ×20</label><input type="number" min="0" id="medit-pwild-${ei}" value="${b.pwild}"></div>
         <div class="modal-field"><label>K–10 ×10</label><input type="number" min="0" id="medit-pface-${ei}" value="${b.pface}"></div>
         <div class="modal-field"><label>9–4 ×5</label><input type="number" min="0" id="medit-plow-${ei}" value="${b.plow}"></div>
-        <div class="modal-section-label">Leftover cards (−)</div>
+        <div class="modal-section-label">Leftover (−)</div>
         ${isIndWinner
           ? `<div style="grid-column:1/-1;font-size:.75rem;color:var(--green-dark);font-style:italic">Went out — no leftover</div>`
           : `<div class="modal-field neg-field"><label>Red 3 −500</label><input type="number" min="0" id="medit-nred3-${ei}" value="${b.nred3}"></div>
              <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${ei}" value="${b.njoker}"></div>
              <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${ei}" value="${b.nwild}"></div>
              <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${ei}" value="${b.nface}"></div>
-             <div class="modal-field neg-field"><label>9–3 −5</label><input type="number" min="0" value="${b.nlow}" id="medit-nlow-${ei}"></div>`
+             <div class="modal-field neg-field"><label>9–3 and below −5</label><input type="number" min="0" id="medit-nlow-${ei}" value="${b.nlow}"></div>`
         }
       </div>
     </div>`;
@@ -370,13 +445,14 @@ window.saveEdit = async function() {
     r.breakdowns[ei] = b;
   });
   closeModal();
-  setStatus("syncing");
+  isRemoteUpdate = true;
   await pushToFirebase();
+  isRemoteUpdate = false;
   renderScoreboard();
   renderMeldTable();
 };
 
-window.closeModal = function() { document.getElementById("edit-modal").classList.remove("open"); editingRoundIdx = null; };
+window.closeModal   = function() { document.getElementById("edit-modal").classList.remove("open"); editingRoundIdx = null; };
 window.handleModalClick = function(e) { if (e.target === document.getElementById("edit-modal")) closeModal(); };
 
 // ── entry columns ─────────────────────────────────────────────────────────────
@@ -385,17 +461,17 @@ function renderEntryColumns() {
   document.getElementById("round-header").textContent = `Round ${round}`;
   const cols = document.getElementById("entry-columns");
   cols.style.gridTemplateColumns = `repeat(${entities.length}, 1fr)`;
-  const outPi = getOutPlayerIdx();
-  const outEi = outPi >= 0 ? players[outPi].entityIdx : -1;
+  const outPi  = getOutPlayerIdx();
+  const outEi  = outPi >= 0 ? players[outPi].entityIdx : -1;
   const totals = getTotals();
 
   cols.innerHTML = entities.map((e, ei) => {
-    const isSaved = submitted.includes(ei);
-    const curScore = totals[ei];
-    const meld = getMeld(curScore, isTeam);
-    const myPlayers = players.map((p, pi) => ({ ...p, pi })).filter(p => p.entityIdx === ei);
+    const isSaved    = submitted.includes(ei);
+    const curScore   = totals[ei];
+    const meld       = getMeld(curScore, isTeam);
+    const myPlayers  = players.map((p, pi) => ({ ...p, pi })).filter(p => p.entityIdx === ei);
     const isIndWinner = !isTeam && ei === outEi;
-    const d = isSaved ? "disabled" : "";
+    const d          = isSaved ? "disabled" : "";
 
     const wentOutHtml = `<div class="went-out-section">
       <div class="col-section-label" style="color:var(--green-dark)">Who went out?</div>
@@ -430,7 +506,7 @@ function renderEntryColumns() {
           <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
           <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
           <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
+          <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
         </div>`;
     const negHtml = `<div class="neg-block" id="neg-block-${ei}"><div class="col-section-label">Leftover (−)</div>${negInner}</div>`;
 
@@ -468,8 +544,7 @@ window.onOutChange = function(clickedPi) {
       const block = document.getElementById(`neg-block-${ei}`);
       if (!block) return;
       const isWinner = ei === outEi;
-      const isSaved = game.submitted.includes(ei);
-      const d = isSaved ? "disabled" : "";
+      const d = game.submitted.includes(ei) ? "disabled" : "";
       block.innerHTML = `<div class="col-section-label">Leftover (−)</div>` + (isWinner
         ? `<div class="neg-gone-out">Went out — no leftover</div>`
         : `<div class="card-grid-2" id="neg-wrap-${ei}">
@@ -477,7 +552,7 @@ window.onOutChange = function(clickedPi) {
             <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
             <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
             <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-            <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
           </div>`);
     });
   }
@@ -524,7 +599,7 @@ window.commitEntity = async function(ei) {
     let finalOutPi = -1;
     game.entities.forEach((_, i) => { if (game.pending[i].outPi >= 0) finalOutPi = game.pending[i].outPi; });
     const breakdowns = game.entities.map((_, i) => {
-      const b = Object.assign({}, game.pending[i].breakdown);
+      const b = { ...game.pending[i].breakdown };
       const isIndWinner = !game.isTeam && game.players[finalOutPi] && game.players[finalOutPi].entityIdx === i;
       if (isIndWinner) { b.nred3=0; b.njoker=0; b.nwild=0; b.nface=0; b.nlow=0; }
       b.wentOut = finalOutPi >= 0 && game.players[finalOutPi].entityIdx === i;
@@ -534,25 +609,25 @@ window.commitEntity = async function(ei) {
     game.rounds.push({ round: game.round, outPlayerIdx: finalOutPi, breakdowns });
     game.round++;
     game.submitted = [];
-    game.pending = {};
+    game.pending   = {};
 
     const totals = getTotals();
-    const winner = checkWinner(totals);
+    const winner  = checkWinner(totals);
     if (winner >= 0) {
-      const banner = document.getElementById("winner-banner");
-      banner.textContent = `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
-      banner.classList.add("visible");
+      document.getElementById("winner-banner").textContent =
+        `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
+      document.getElementById("winner-banner").classList.add("visible");
       document.getElementById("entry-area").style.display = "none";
     } else {
       renderEntryColumns();
     }
-    setStatus("syncing");
+    isRemoteUpdate = true;
     await pushToFirebase();
+    isRemoteUpdate = false;
     renderScoreboard();
     renderMeldTable();
     window.scrollTo(0, 0);
   } else {
-    // Grey out this column without full re-render
     const col = document.getElementById(`col-${ei}`);
     if (col) col.classList.add("col-saved");
     const btn = col ? col.querySelector(".btn-success") : null;
