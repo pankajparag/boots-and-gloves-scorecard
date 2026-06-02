@@ -139,9 +139,12 @@ function subscribeToFirebase(gameId) {
     if (isRemoteUpdate) return; // we just wrote this, skip
     const data = snapshot.val();
     if (!data) { setStatus("synced"); return; }
+    // Only apply remote updates if a game is already running locally
+    // (prevents the immediate onValue echo from overwriting mid-setup state)
+    if (!game) { setStatus("synced"); return; }
     // Merge remote state, preserve local transient fields
-    const sub = game ? game.submitted : [];
-    const pen = game ? game.pending   : {};
+    const sub = game.submitted || [];
+    const pen = game.pending   || {};
     game = { ...data, submitted: sub, pending: pen };
     currentGameId   = data.gameId   || gameId;
     currentGameCode = data.gameCode || "";
@@ -181,6 +184,7 @@ function updateGameCodeDisplay() {
 function num(id)  { const el = document.getElementById(id); return el ? (parseInt(el.value) || 0) : 0; }
 function chk(id)  { const el = document.getElementById(id); return el ? el.checked : false; }
 function getTotals() {
+  if (!game) return [];
   const t = game.entities.map(() => 0);
   for (const r of game.rounds) r.breakdowns.forEach((b, i) => t[i] += b.total);
   return t;
@@ -560,6 +564,7 @@ window.onOutChange = function(clickedPi) {
 };
 
 function readBreakdownFromDOM(ei) {
+  if (!game) return { rb:0,bb:0,wentOut:false,pjoker:0,pwild:0,pface:0,plow:0,nred3:0,njoker:0,nwild:0,nface:0,nlow:0,total:0 };
   const outPi = getOutPlayerIdx();
   const outEi = outPi >= 0 ? game.players[outPi].entityIdx : -1;
   const isIndWinner = !game.isTeam && ei === outEi;
@@ -579,6 +584,7 @@ function readBreakdownFromDOM(ei) {
 }
 
 window.updateColPreview = function(ei) {
+  if (!game) return;
   const el = document.getElementById(`preview-${ei}`);
   if (!el) return;
   const b = readBreakdownFromDOM(ei);
