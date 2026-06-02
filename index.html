@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boots & Gloves — Score Card</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Boots &amp; Gloves</h1>
+    <p>score card</p>
+  </div>
+  <div class="header-links">
+    <span style="font-size:.7rem;color:#888;font-family:'IBM Plex Mono',monospace">Play online →</span>
+    <a class="game-link" href="https://playingcards.io/dferem" target="_blank" id="link-ind3">Individual 3P</a>
+    <a class="game-link" href="https://playingcards.io/utv8e9" target="_blank" id="link-team2v2">Team 2v2</a>
+    <a class="game-link" href="https://playingcards.io/xv2w4e" target="_blank" id="link-team3v3">Team 3v3</a>
+    <span id="sync-status" style="font-family:'IBM Plex Mono',monospace;font-size:.7rem;margin-left:.5rem;color:#6b6b80">◌ not connected</span>
+  </div>
+</header>
+
+<div class="setup-panel">
+  <div>
+    <label>Game mode</label>
+    <select id="game-mode" onchange="onModeChange()">
+      <option value="ind3">Individual — 3 players</option>
+      <option value="team2v2">Team — 2 v 2</option>
+      <option value="team3v3">Team — 3 v 3</option>
+      <option value="custom">Custom scorecard…</option>
+    </select>
+  </div>
+
+  <!-- Custom game row — shown only when "custom" is selected -->
+  <div id="custom-game-row" style="display:none;gap:0.75rem;align-items:flex-end;flex-wrap:wrap">
+    <div>
+      <label>Layout</label>
+      <select id="custom-mode" onchange="onCustomModeChange()">
+        <option value="ind3">Individual 3P</option>
+        <option value="team2v2">Team 2v2</option>
+        <option value="team3v3">Team 3v3</option>
+      </select>
+    </div>
+    <div>
+      <label>Scorecard name</label>
+      <input type="text" id="custom-game-id" placeholder="e.g. friday1" maxlength="20"
+        style="font-family:'IBM Plex Mono',monospace;font-size:.88rem;border:1px solid var(--border);border-radius:6px;padding:6px 10px;background:var(--bg);color:var(--text);outline:none;width:130px;">
+    </div>
+  </div>
+
+  <div id="player-names-setup" class="player-setup"></div>
+
+  <div>
+    <label>Win target (pts)</label>
+    <input type="number" id="win-target" value="6000" step="500" min="1000" style="width:110px">
+  </div>
+  <div>
+    <button class="btn btn-primary" onclick="startGame()">Start / Reset game</button>
+  </div>
+</div>
+
+<!-- Active game badge -->
+<div id="game-badge" style="background:var(--black);color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:.75rem;padding:.35rem 2rem;display:none">
+  Scorecard: <span id="game-code-display"></span>
+</div>
+
+<!-- edit modal -->
+<div class="modal-backdrop" id="edit-modal" onclick="handleModalClick(event)">
+  <div class="modal">
+    <h3 id="modal-title">Edit Round</h3>
+    <div class="modal-entity-cols" id="modal-fields"></div>
+    <div class="modal-actions">
+      <button class="btn btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-success" onclick="saveEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="page">
+  <div id="winner-banner" class="winner-banner"></div>
+  <div class="scoreboard-wrap">
+    <div class="scoreboard" id="scoreboard">
+      <div class="empty-state"><div class="big">No game in progress</div>Set up players above and click Start</div>
+    </div>
+    <div class="meld-table-wrap" id="meld-table-wrap"></div>
+  </div>
+  <div id="entry-area" style="display:none">
+    <div class="entry-round-header" id="round-header">Round 1</div>
+    <div class="entry-columns" id="entry-columns"></div>
+  </div>
+</div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
