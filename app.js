@@ -488,29 +488,29 @@ function renderEntryColumns() {
     const booksHtml = `<div>
       <div class="col-section-label">Books</div>
       <div class="books-row">
-        <div class="book-field red"><label>🔴 Red ×500</label><input type="number" min="0" value="0" id="rb-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-        <div class="book-field black"><label>⚫ Black ×300</label><input type="number" min="0" value="0" id="bb-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
+        <div class="book-field red"><label>🔴 Red ×500</label><input type="number" min="0" value="0" id="rb-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+        <div class="book-field black"><label>⚫ Black ×300</label><input type="number" min="0" value="0" id="bb-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
       </div>
     </div>`;
 
     const posHtml = `<div>
       <div class="col-section-label">Cards scored (+)</div>
       <div class="card-grid-2">
-        <div class="cf"><label>Joker ×50</label><input type="number" min="0" value="0" id="pjoker-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-        <div class="cf"><label>2/Ace ×20</label><input type="number" min="0" value="0" id="pwild-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-        <div class="cf"><label>K–10 ×10</label><input type="number" min="0" value="0" id="pface-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-        <div class="cf"><label>9–4 ×5</label><input type="number" min="0" value="0" id="plow-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
+        <div class="cf"><label>Joker ×50</label><input type="number" min="0" value="0" id="pjoker-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+        <div class="cf"><label>2/Ace ×20</label><input type="number" min="0" value="0" id="pwild-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+        <div class="cf"><label>K–10 ×10</label><input type="number" min="0" value="0" id="pface-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+        <div class="cf"><label>9–4 ×5</label><input type="number" min="0" value="0" id="plow-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
       </div>
     </div>`;
 
     const negInner = isIndWinner
       ? `<div class="neg-gone-out">Went out — no leftover</div>`
       : `<div class="card-grid-2" id="neg-wrap-${ei}">
-          <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
+          <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+          <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+          <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+          <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+          <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
         </div>`;
     const negHtml = `<div class="neg-block" id="neg-block-${ei}"><div class="col-section-label">Leftover (−)</div>${negInner}</div>`;
 
@@ -552,11 +552,11 @@ window.onOutChange = function(clickedPi) {
       block.innerHTML = `<div class="col-section-label">Leftover (−)</div>` + (isWinner
         ? `<div class="neg-gone-out">Went out — no leftover</div>`
         : `<div class="card-grid-2" id="neg-wrap-${ei}">
-            <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-            <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-            <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-            <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
-            <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} onchange="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
           </div>`);
     });
   }
