@@ -5,7 +5,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { getDatabase } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "",
+  apiKey: "AIzaSyDrvlT48cjF8naf8Qte8xAm8rc0L2u2aXI",
   authDomain: "boots-and-gloves.firebaseapp.com",
   databaseURL: "https://boots-and-gloves-default-rtdb.firebaseio.com",
   projectId: "boots-and-gloves",
