@@ -31,6 +31,8 @@ const FIXED_GAME_IDS = {
   team3v3: { id: "bnag-xv2w4e",  code: "xv2w4e"  }
 };
 
+const PRESET_NAMES = ["Marvin","Sandra","Becky","Pankaj","Juan","Laurie","Frances","Abhishek","Gaurav"];
+
 // ── game state ────────────────────────────────────────────────────────────────
 let game = null;
 let currentGameId = null;   // e.g. "bnag-dferem"
@@ -74,10 +76,10 @@ function subscribeToFirebase(gameId) {
     if (!data) { setStatus("synced"); return; }
     // Only apply remote updates if a game is already running locally
     if (!game) { setStatus("synced"); return; }
-    // Preserve local transient fields; guard rounds against Firebase null-coercing []
+    // Preserve local transient fields; normalise Firebase arrays (can be null or object)
     const sub = game.submitted || [];
     const pen = game.pending   || {};
-    game = { ...data, rounds: data.rounds || [], submitted: sub, pending: pen };
+    game = { ...data, rounds: toArray(data.rounds), entities: toArray(data.entities), players: toArray(data.players), submitted: sub, pending: pen };
     currentGameId   = data.gameId   || gameId;
     currentGameCode = data.gameCode || "";
     setStatus("synced");
@@ -115,6 +117,21 @@ function updateGameCodeDisplay() {
 // ── helpers ───────────────────────────────────────────────────────────────────
 function esc(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+// Firebase coerces empty arrays to null and can return dense arrays as objects;
+// this normalises both back to a plain JS array.
+function toArray(v) {
+  if (v == null) return [];
+  if (Array.isArray(v)) return v;
+  return Object.keys(v).sort((a, b) => Number(a) - Number(b)).map(k => v[k]);
+}
+// Remove already-chosen preset names from the datalist so each name can only be picked once.
+function updatePresetList() {
+  const used = new Set(
+    [...document.querySelectorAll(".player-name-input")].map(el => el.value.trim()).filter(Boolean)
+  );
+  const dl = document.getElementById("preset-names");
+  if (dl) dl.innerHTML = PRESET_NAMES.filter(n => !used.has(n)).map(n => `<option value="${n}">`).join("");
 }
 function num(id)  { const el = document.getElementById(id); return el ? (parseInt(el.value) || 0) : 0; }
 function chk(id)  { const el = document.getElementById(id); return el ? el.checked : false; }
@@ -183,6 +200,7 @@ function renderPlayerNameInputs(modeOverride) {
     wrap.innerHTML = `<span id="label-${id}">${ph}</span><input class="player-name-input" id="name-${id}" placeholder="${ph}" value="${ph}" oninput="refreshNameLabels()" list="preset-names">`;
     container.appendChild(wrap);
   }
+  updatePresetList();
 }
 
 window.refreshNameLabels = function() {
@@ -191,6 +209,7 @@ window.refreshNameLabels = function() {
     const span = document.getElementById("label-" + id);
     if (span) span.textContent = inp.value || inp.placeholder;
   });
+  updatePresetList();
 };
 
 function getPlayerNames(effectiveMode) {
@@ -247,7 +266,9 @@ window.startGame = async function() {
       `A game "${gameCode}" already exists (Round ${existing.round}, players: ${existing.players.map(p => p.name).join(", ")}).\n\nCancel = resume existing · OK = start fresh`
     );
     if (!resume) {
-      game = { ...existing, rounds: existing.rounds || [], submitted: [], pending: {} };
+      game = { ...existing, rounds: toArray(existing.rounds), entities: toArray(existing.entities), players: toArray(existing.players), submitted: [], pending: {} };
+      localStorage.setItem("bnag-lastGameId",   gameId);
+      localStorage.setItem("bnag-lastGameCode", gameCode);
       subscribeToFirebase(gameId);
       document.getElementById("winner-banner").classList.remove("visible");
       document.getElementById("entry-area").style.display = "block";
@@ -262,6 +283,9 @@ window.startGame = async function() {
   document.getElementById("entry-area").style.display = "block";
   updateGameCodeDisplay();
 
+  localStorage.setItem("bnag-lastGameId",   gameId);
+  localStorage.setItem("bnag-lastGameCode", gameCode);
+
   isRemoteUpdate = true;
   await pushToFirebase();
   isRemoteUpdate = false;
@@ -271,9 +295,10 @@ window.startGame = async function() {
 };
 
 // ── inline rename ─────────────────────────────────────────────────────────────
+// e.currentTarget is unreliable from inline handlers after dispatch; use e.target.
 window.handleRenameKeydown = function(e) {
-  if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
-  if (e.key === "Escape") { e.currentTarget.textContent = e.currentTarget.dataset.orig; e.currentTarget.blur(); }
+  if (e.key === "Enter") { e.preventDefault(); e.target.blur(); }
+  if (e.key === "Escape") { e.target.textContent = e.target.dataset.orig; e.target.blur(); }
 };
 
 window.saveEntityName = async function(ei, el) {
@@ -283,6 +308,12 @@ window.saveEntityName = async function(ei, el) {
   game.entities[ei].name = newName;
   if (!game.isTeam) game.players[ei].name = newName; // ind3: entity === player
   el.dataset.orig = newName;
+  // Update entry column header text without resetting score inputs
+  document.querySelectorAll(`#col-${ei} .col-name .editable-name`).forEach(s => {
+    if (s !== el) { s.textContent = newName; s.dataset.orig = newName; }
+  });
+  const saveBtn = document.querySelector(`#col-${ei} .btn-success`);
+  if (saveBtn) saveBtn.textContent = `✓ Save — ${newName}`;
   isRemoteUpdate = true;
   await pushToFirebase();
   isRemoteUpdate = false;
@@ -298,8 +329,19 @@ window.savePlayerName = async function(pi, el) {
   const ei = game.players[pi].entityIdx;
   if (game.entities[ei].players) {
     const j = game.entities[ei].players.indexOf(oldName);
-    if (j >= 0) game.entities[ei].players[j] = newName;
+    if (j >= 0) {
+      game.entities[ei].players[j] = newName;
+      // Update the sibling col-players span (same position, different element)
+      const playerSpans = document.querySelectorAll(`#col-${ei} .col-players .editable-name`);
+      if (playerSpans[j] && playerSpans[j] !== el) {
+        playerSpans[j].textContent = newName;
+        playerSpans[j].dataset.orig = newName;
+      }
+    }
   }
+  // Update "Who went out?" label for this player
+  const outLabel = document.querySelector(`label[for="out-${pi}"]`);
+  if (outLabel) outLabel.textContent = newName;
   el.dataset.orig = newName;
   isRemoteUpdate = true;
   await pushToFirebase();
@@ -664,3 +706,36 @@ function renderAll() {
 // ── init ──────────────────────────────────────────────────────────────────────
 renderPlayerNameInputs("team2v2");
 highlightActiveLink("team2v2");
+
+// On page load, restore the last active game from Firebase if one was saved
+(async () => {
+  const savedId   = localStorage.getItem("bnag-lastGameId");
+  const savedCode = localStorage.getItem("bnag-lastGameCode");
+  if (!savedId) return;
+  currentGameId   = savedId;
+  currentGameCode = savedCode || "";
+  setStatus("syncing");
+  try {
+    const snapshot = await get(gameRef(savedId));
+    if (!snapshot.exists()) { setStatus("synced"); return; }
+    const data = snapshot.val();
+    game = { ...data, rounds: toArray(data.rounds), entities: toArray(data.entities), players: toArray(data.players), submitted: [], pending: {} };
+    updateGameCodeDisplay();
+    subscribeToFirebase(savedId);
+    const totals = getTotals();
+    const winner = checkWinner(totals, game.target);
+    if (winner >= 0) {
+      document.getElementById("winner-banner").textContent =
+        `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
+      document.getElementById("winner-banner").classList.add("visible");
+      renderScoreboard();
+      renderMeldTable();
+    } else {
+      document.getElementById("entry-area").style.display = "block";
+      renderAll();
+    }
+  } catch (e) {
+    setStatus("error");
+    console.error("Auto-restore error:", e);
+  }
+})();
