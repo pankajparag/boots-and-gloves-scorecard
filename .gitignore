@@ -1,2 +1,3 @@
 # Firebase config with real API key — injected by GitHub Actions
 firebase-config.js
+node_modules/

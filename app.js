@@ -2,6 +2,9 @@ import { db } from "./firebase-config.js";
 import {
   ref, set, onValue, get
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import {
+  getBrackets, getMeld, isTeamMode, calcTotal, checkWinner, buildGame
+} from "./game-logic.js";
 
 // ── Firebase paths ────────────────────────────────────────────────────────────
 // Each game mode maps to a fixed Firebase path based on the playingcards.io room code.
@@ -28,82 +31,12 @@ const FIXED_GAME_IDS = {
   team3v3: { id: "bnag-xv2w4e",  code: "xv2w4e"  }
 };
 
-// ── meld brackets ─────────────────────────────────────────────────────────────
-const MELD_IND = [
-  { label:"< 1,000",       min:-Infinity, max:1000,    meld:50  },
-  { label:"1,000 – 1,999", min:1000,      max:2000,    meld:90  },
-  { label:"2,000 – 2,999", min:2000,      max:3000,    meld:120 },
-  { label:"3,000 – 3,999", min:3000,      max:4000,    meld:150 },
-  { label:"4,000 – 4,999", min:4000,      max:5000,    meld:180 },
-  { label:"5,000 – 5,999", min:5000,      max:6000,    meld:210 },
-  { label:"≥ 6,000",       min:6000,      max:Infinity, meld:null, win:true }
-];
-const MELD_TEAM = [
-  { label:"< 1,300",        min:-Infinity, max:1300,    meld:50  },
-  { label:"1,300 – 2,499",  min:1300,      max:2500,    meld:90  },
-  { label:"2,500 – 4,599",  min:2500,      max:4600,    meld:120 },
-  { label:"4,600 – 7,499",  min:4600,      max:7500,    meld:150 },
-  { label:"7,500 – 8,999",  min:7500,      max:9000,    meld:180 },
-  { label:"9,000 – 9,999",  min:9000,      max:10000,   meld:210 },
-  { label:"≥ 10,000",       min:10000,     max:Infinity, meld:null, win:true }
-];
-function getBrackets(isTeam) { return isTeam ? MELD_TEAM : MELD_IND; }
-function getMeld(score, isTeam) {
-  for (const b of getBrackets(isTeam)) if (score >= b.min && score < b.max) return b.win ? null : b.meld;
-  return 210;
-}
-function isTeamMode(m) { return m === "team2v2" || m === "team3v3"; }
-
-// ── breakdown calc ────────────────────────────────────────────────────────────
-// nlow covers 9–3 (including black 3, which is the same −5 value)
-// nred3 is separate at −500
-function calcTotal(b, isIndWinner) {
-  const books = b.rb * 500 + b.bb * 300;
-  const win   = b.wentOut ? 100 : 0;
-  const pos   = b.pjoker * 50 + b.pwild * 20 + b.pface * 10 + b.plow * 5;
-  const neg   = isIndWinner ? 0
-    : -(b.nred3 * 500 + b.njoker * 50 + b.nwild * 20 + b.nface * 10 + b.nlow * 5);
-  return books + win + pos + neg;
-}
-
 // ── game state ────────────────────────────────────────────────────────────────
 let game = null;
 let currentGameId = null;   // e.g. "bnag-dferem"
 let currentGameCode = null; // e.g. "dferem"
 let syncUnsubscribe = null;
 let isRemoteUpdate = false; // flag to suppress re-push on incoming Firebase updates
-
-function buildGame(mode, target, playerNames, gameId, gameCode) {
-  const n = id => playerNames[id] || id;
-  const base = { mode, isTeam: isTeamMode(mode), target, gameId, gameCode,
-                 rounds: [], round: 1, submitted: [], pending: {} };
-  if (mode === "ind3") {
-    const names = [n("P1"), n("P2"), n("P3")];
-    return { ...base,
-      players:  names.map((name, i) => ({ name, entityIdx: i })),
-      entities: names.map(name => ({ name })) };
-  }
-  if (mode === "team2v2") {
-    const pl = [
-      { name: n("T1P1"), entityIdx: 0 }, { name: n("T1P2"), entityIdx: 0 },
-      { name: n("T2P1"), entityIdx: 1 }, { name: n("T2P2"), entityIdx: 1 }
-    ];
-    return { ...base, players: pl, entities: [
-      { name: "Team 1", players: [pl[0].name, pl[1].name] },
-      { name: "Team 2", players: [pl[2].name, pl[3].name] }
-    ]};
-  }
-  if (mode === "team3v3") {
-    const pl = [
-      { name: n("T1P1"), entityIdx: 0 }, { name: n("T1P2"), entityIdx: 0 }, { name: n("T1P3"), entityIdx: 0 },
-      { name: n("T2P1"), entityIdx: 1 }, { name: n("T2P2"), entityIdx: 1 }, { name: n("T2P3"), entityIdx: 1 }
-    ];
-    return { ...base, players: pl, entities: [
-      { name: "Team 1", players: [pl[0].name, pl[1].name, pl[2].name] },
-      { name: "Team 2", players: [pl[3].name, pl[4].name, pl[5].name] }
-    ]};
-  }
-}
 
 // ── Firebase sync ─────────────────────────────────────────────────────────────
 function gameRef(id) { return ref(db, "games/" + (id || currentGameId)); }
@@ -140,12 +73,11 @@ function subscribeToFirebase(gameId) {
     const data = snapshot.val();
     if (!data) { setStatus("synced"); return; }
     // Only apply remote updates if a game is already running locally
-    // (prevents the immediate onValue echo from overwriting mid-setup state)
     if (!game) { setStatus("synced"); return; }
-    // Merge remote state, preserve local transient fields
+    // Preserve local transient fields; guard rounds against Firebase null-coercing []
     const sub = game.submitted || [];
     const pen = game.pending   || {};
-    game = { ...data, submitted: sub, pending: pen };
+    game = { ...data, rounds: data.rounds || [], submitted: sub, pending: pen };
     currentGameId   = data.gameId   || gameId;
     currentGameCode = data.gameCode || "";
     setStatus("synced");
@@ -181,6 +113,9 @@ function updateGameCodeDisplay() {
 }
 
 // ── helpers ───────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
 function num(id)  { const el = document.getElementById(id); return el ? (parseInt(el.value) || 0) : 0; }
 function chk(id)  { const el = document.getElementById(id); return el ? el.checked : false; }
 function getTotals() {
@@ -189,13 +124,20 @@ function getTotals() {
   for (const r of game.rounds) r.breakdowns.forEach((b, i) => t[i] += b.total);
   return t;
 }
-function checkWinner(totals) {
-  for (let i = 0; i < totals.length; i++) if (totals[i] >= game.target) return i;
-  return -1;
-}
 function gridStyle(n) { return `grid-template-columns:72px repeat(${n},1fr)`; }
 function getOutPlayerIdx() {
   for (let i = 0; i < game.players.length; i++) if (chk(`out-${i}`)) return i;
+  return -1;
+}
+// Returns the game.players index for the j-th player belonging to entity ei
+function findPlayerByPosition(ei, posInTeam) {
+  let count = 0;
+  for (let pi = 0; pi < game.players.length; pi++) {
+    if (game.players[pi].entityIdx === ei) {
+      if (count === posInTeam) return pi;
+      count++;
+    }
+  }
   return -1;
 }
 
@@ -238,7 +180,7 @@ function renderPlayerNameInputs(modeOverride) {
   for (const [id, ph] of (configs[effectiveMode] || [])) {
     const wrap = document.createElement("div");
     wrap.className = "player-label";
-    wrap.innerHTML = `<span id="label-${id}">${ph}</span><input class="player-name-input" id="name-${id}" placeholder="${ph}" value="${ph}" oninput="refreshNameLabels()">`;
+    wrap.innerHTML = `<span id="label-${id}">${ph}</span><input class="player-name-input" id="name-${id}" placeholder="${ph}" value="${ph}" oninput="refreshNameLabels()" list="preset-names">`;
     container.appendChild(wrap);
   }
 }
@@ -267,7 +209,7 @@ window.startGame = async function() {
   const modeSelect    = document.getElementById("game-mode").value;
   const isCustom      = modeSelect === "custom";
   const effectiveMode = isCustom ? document.getElementById("custom-mode").value : modeSelect;
-  const target        = parseInt(document.getElementById("win-target").value) || 6000;
+  const target        = parseInt(document.getElementById("win-target").value) || 10000;
   const names         = getPlayerNames(effectiveMode);
 
   let gameId, gameCode;
@@ -305,7 +247,7 @@ window.startGame = async function() {
       `A game "${gameCode}" already exists (Round ${existing.round}, players: ${existing.players.map(p => p.name).join(", ")}).\n\nCancel = resume existing · OK = start fresh`
     );
     if (!resume) {
-      game = { ...existing, submitted: [], pending: [] };
+      game = { ...existing, rounds: existing.rounds || [], submitted: [], pending: {} };
       subscribeToFirebase(gameId);
       document.getElementById("winner-banner").classList.remove("visible");
       document.getElementById("entry-area").style.display = "block";
@@ -328,14 +270,66 @@ window.startGame = async function() {
   renderAll();
 };
 
+// ── inline rename ─────────────────────────────────────────────────────────────
+window.handleRenameKeydown = function(e) {
+  if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+  if (e.key === "Escape") { e.currentTarget.textContent = e.currentTarget.dataset.orig; e.currentTarget.blur(); }
+};
+
+window.saveEntityName = async function(ei, el) {
+  if (!game) return;
+  const newName = el.textContent.trim();
+  if (!newName) { el.textContent = game.entities[ei].name; return; }
+  game.entities[ei].name = newName;
+  if (!game.isTeam) game.players[ei].name = newName; // ind3: entity === player
+  el.dataset.orig = newName;
+  isRemoteUpdate = true;
+  await pushToFirebase();
+  isRemoteUpdate = false;
+  renderScoreboard();
+};
+
+window.savePlayerName = async function(pi, el) {
+  if (!game || pi < 0) return;
+  const newName = el.textContent.trim();
+  if (!newName) { el.textContent = game.players[pi].name; return; }
+  const oldName = game.players[pi].name;
+  game.players[pi].name = newName;
+  const ei = game.players[pi].entityIdx;
+  if (game.entities[ei].players) {
+    const j = game.entities[ei].players.indexOf(oldName);
+    if (j >= 0) game.entities[ei].players[j] = newName;
+  }
+  el.dataset.orig = newName;
+  isRemoteUpdate = true;
+  await pushToFirebase();
+  isRemoteUpdate = false;
+  renderScoreboard();
+};
+
 // ── scoreboard ────────────────────────────────────────────────────────────────
 function renderScoreboard() {
   const { entities, rounds, isTeam } = game;
   const n = entities.length;
+
+  const headerCells = entities.map((e, ei) => {
+    const entitySpan = `<span class="editable-name" contenteditable="true" data-orig="${esc(e.name)}"
+      onblur="saveEntityName(${ei}, this)" onkeydown="handleRenameKeydown(event)">${esc(e.name)}</span>`;
+    const playerSpans = e.players
+      ? "<br><span style='font-size:.62rem;opacity:.55'>" +
+        e.players.map((pname, j) => {
+          const pi = findPlayerByPosition(ei, j);
+          return `<span class="editable-name" contenteditable="true" data-orig="${esc(pname)}"
+            onblur="savePlayerName(${pi}, this)" onkeydown="handleRenameKeydown(event)">${esc(pname)}</span>`;
+        }).join(" / ") + "</span>"
+      : "";
+    return `<div style="text-align:right">${entitySpan}${playerSpans}</div>`;
+  }).join("");
+
   let html = `<div class="scoreboard-header" style="${gridStyle(n)}">
-    <div>Rd</div>
-    ${entities.map(e => `<div style="text-align:right">${e.name}${e.players ? "<br><span style='font-size:.62rem;opacity:.55'>" + e.players.join(" / ") + "</span>" : ""}</div>`).join("")}
+    <div>Rd</div>${headerCells}
   </div>`;
+
   if (!rounds.length) {
     html += `<div class="empty-state"><div class="big">No rounds yet</div>Enter round 1 below</div>`;
   } else {
@@ -347,7 +341,7 @@ function renderScoreboard() {
         ${r.breakdowns.map(b => `<div class="score-val ${b.total < 0 ? "negative" : ""}">${b.total >= 0 ? "+" : ""}${b.total}</div>`).join("")}
       </div>`;
     }
-    const winner = checkWinner(totals);
+    const winner = checkWinner(totals, game.target);
     html += `<div class="score-row totals-row" style="${gridStyle(n)}">
       <div class="round-label" style="font-weight:500">Total</div>
       ${totals.map((t, i) => `<div class="score-val total ${t < 0 ? "negative" : "positive"} ${winner === i ? "winner-col" : ""}">${t.toLocaleString()}</div>`).join("")}
@@ -388,11 +382,11 @@ window.openEditModal = function(roundIdx) {
     const isIndWinner = !game.isTeam && b.wentOut;
     const wentOutHtml = myPlayers.map(p => `<div class="modal-check">
       <input type="checkbox" id="medit-out-${p.pi}" ${b.wentOut && p.pi === r.outPlayerIdx ? "checked" : ""} onchange="onModalOutChange(${p.pi})">
-      <label for="medit-out-${p.pi}">${p.name} went out</label>
+      <label for="medit-out-${p.pi}">${esc(p.name)} went out</label>
     </div>`).join("");
 
     return `<div class="modal-entity">
-      <div class="modal-entity-title">${e.name}${e.players ? "<br><span style='font-size:.65rem;opacity:.7'>" + e.players.join(" · ") + "</span>" : ""}</div>
+      <div class="modal-entity-title">${esc(e.name)}${e.players ? "<br><span style='font-size:.65rem;opacity:.7'>" + e.players.map(esc).join(" · ") + "</span>" : ""}</div>
       <div class="modal-grid">
         <div class="modal-section-label">Who went out</div>
         <div style="grid-column:1/-1">${wentOutHtml}</div>
@@ -456,7 +450,7 @@ window.saveEdit = async function() {
   renderMeldTable();
 };
 
-window.closeModal   = function() { document.getElementById("edit-modal").classList.remove("open"); editingRoundIdx = null; };
+window.closeModal       = function() { document.getElementById("edit-modal").classList.remove("open"); editingRoundIdx = null; };
 window.handleModalClick = function(e) { if (e.target === document.getElementById("edit-modal")) closeModal(); };
 
 // ── entry columns ─────────────────────────────────────────────────────────────
@@ -477,11 +471,21 @@ function renderEntryColumns() {
     const isIndWinner = !isTeam && ei === outEi;
     const d          = isSaved ? "disabled" : "";
 
+    const teamPlayersHtml = e.players
+      ? `<div class="col-players">${
+          e.players.map((pname, j) => {
+            const pi = findPlayerByPosition(ei, j);
+            return `<span class="editable-name" contenteditable="true" data-orig="${esc(pname)}"
+              onblur="savePlayerName(${pi}, this)" onkeydown="handleRenameKeydown(event)">${esc(pname)}</span>`;
+          }).join(" · ")
+        }</div>`
+      : "";
+
     const wentOutHtml = `<div class="went-out-section">
       <div class="col-section-label" style="color:var(--green-dark)">Who went out?</div>
       ${myPlayers.map(p => `<div class="win-row-check">
         <input type="checkbox" id="out-${p.pi}" onchange="onOutChange(${p.pi})" ${isSaved ? "disabled" : ""}>
-        <label for="out-${p.pi}">${p.name}</label>
+        <label for="out-${p.pi}">${esc(p.name)}</label>
       </div>`).join("")}
     </div>`;
 
@@ -516,13 +520,14 @@ function renderEntryColumns() {
 
     const previewHtml = `<div class="col-preview" id="preview-${ei}"><div class="prev-total">—</div><div class="prev-detail">Enter scores above</div></div>`;
     const saveHtml = isSaved
-      ? `<button class="btn btn-saved" style="width:100%" disabled>✓ Saved — ${e.name}</button>`
-      : `<button class="btn btn-success" style="width:100%" onclick="commitEntity(${ei})">✓ Save — ${e.name}</button>`;
+      ? `<button class="btn btn-saved" style="width:100%" disabled>✓ Saved — ${esc(e.name)}</button>`
+      : `<button class="btn btn-success" style="width:100%" onclick="commitEntity(${ei})">✓ Save — ${esc(e.name)}</button>`;
 
     return `<div class="entity-col ${isSaved ? "col-saved" : ""}" id="col-${ei}">
       <div class="entity-col-header">
-        <div class="col-name">${e.name}</div>
-        ${e.players ? `<div class="col-players">${e.players.join(" · ")}</div>` : ""}
+        <div class="col-name"><span class="editable-name" contenteditable="true" data-orig="${esc(e.name)}"
+          onblur="saveEntityName(${ei}, this)" onkeydown="handleRenameKeydown(event)">${esc(e.name)}</span></div>
+        ${teamPlayersHtml}
       </div>
       <div class="entity-col-body">
         ${wentOutHtml}${booksHtml}${posHtml}${negHtml}${previewHtml}
@@ -618,7 +623,7 @@ window.commitEntity = async function(ei) {
     game.pending   = {};
 
     const totals = getTotals();
-    const winner  = checkWinner(totals);
+    const winner  = checkWinner(totals, game.target);
     if (winner >= 0) {
       document.getElementById("winner-banner").textContent =
         `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
@@ -657,5 +662,5 @@ function renderAll() {
 }
 
 // ── init ──────────────────────────────────────────────────────────────────────
-renderPlayerNameInputs();
-highlightActiveLink("ind3");
+renderPlayerNameInputs("team2v2");
+highlightActiveLink("team2v2");

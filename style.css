@@ -124,4 +124,10 @@
   .player-name-input{font-family:'IBM Plex Mono',monospace;font-size:.83rem;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:115px;background:var(--bg);}
   .empty-state{text-align:center;padding:3rem 1rem;color:var(--text-muted);font-size:.88rem;}
   .empty-state .big{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--text-light);margin-bottom:.4rem;}
+
+  /* Inline-editable name spans — appear in scoreboard header and column headers */
+  .editable-name{cursor:text;border-radius:3px;padding:1px 3px;display:inline-block;outline:none;transition:background .15s;min-width:1em;}
+  .editable-name:hover{background:rgba(255,255,255,.18);}
+  .editable-name:focus{background:rgba(255,255,255,.22);outline:1px solid var(--gold);}
+  .editable-name:empty::before{content:attr(data-orig);opacity:.5;}
   
