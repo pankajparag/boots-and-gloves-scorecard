@@ -128,6 +128,22 @@ function findPlayerByPosition(ei, posInTeam) {
   return -1;
 }
 
+function getDealerInfo(roundNum) {
+  if (!game) return null;
+  const totalPlayers = game.players.length;
+  const dealerIdx = (roundNum - 1) % totalPlayers;
+  if (game.isTeam) {
+    const numTeams = game.entities.length;
+    const teamIdx = dealerIdx % numTeams;
+    const posInTeam = Math.floor(dealerIdx / numTeams);
+    const pi = findPlayerByPosition(teamIdx, posInTeam);
+    return pi >= 0 ? { entityIdx: teamIdx, playerName: game.players[pi].name } : null;
+  } else {
+    // ind3: each player is their own entity
+    return { entityIdx: dealerIdx, playerName: game.players[dealerIdx].name };
+  }
+}
+
 // Default names for a fresh game. User renames via the players bar.
 function defaultPlayerNames(mode) {
   return ({
@@ -140,8 +156,9 @@ function defaultPlayerNames(mode) {
 // ── setup UI ──────────────────────────────────────────────────────────────────
 window.onModeChange = async function() {
   const mode = document.getElementById("game-mode").value;
-  document.getElementById("win-target").value = isTeamMode(mode) ? 10000 : 6000;
   const isCustom = mode === "custom";
+  const effectiveMode = isCustom ? document.getElementById("custom-mode").value : mode;
+  document.getElementById("win-target").value = isTeamMode(effectiveMode) ? 10000 : 6000;
   document.getElementById("custom-game-row").style.display = isCustom ? "flex" : "none";
   highlightActiveLink(mode);
   if (!isCustom) {
@@ -291,6 +308,14 @@ function renderPlayersBar() {
   const dl = document.getElementById("preset-names");
   if (dl) dl.innerHTML = PRESET_NAMES.filter(n => !used.has(n)).map(n => `<option value="${n}">`).join("");
 
+  const currentDealer = getDealerInfo(game.round);
+  const nextDealer    = getDealerInfo(game.round + 1);
+  const dealerBlockHtml = `<div id="pbar-dealer-block" class="pbar-dealer-block">
+    <div class="pbar-dealer-round" id="pbar-dealer-round">Round ${game.round}</div>
+    ${currentDealer ? `<div class="pbar-dealer-current">🃏 <strong>${esc(currentDealer.playerName)}</strong></div>` : ""}
+    ${nextDealer    ? `<div class="pbar-dealer-next">Next: <strong>${esc(nextDealer.playerName)}</strong></div>` : ""}
+  </div>`;
+
   if (game.isTeam) {
     bar.innerHTML = `<div class="pbar-inner">${
       game.entities.map((e, ei) => {
@@ -308,7 +333,7 @@ function renderPlayersBar() {
           }</div>
         </div>`;
       }).join(`<div class="pbar-vs">vs</div>`)
-    }</div>`;
+    }${dealerBlockHtml}</div>`;
   } else {
     // ind3: entity name = player name, one input per player
     bar.innerHTML = `<div class="pbar-inner">${
@@ -317,7 +342,7 @@ function renderPlayersBar() {
           value="${esc(p.name)}" placeholder="${esc(p.name)}"
           oninput="onPlayerNameInput(${pi}, this)">`
       ).join("")
-    }</div>`;
+    }${dealerBlockHtml}</div>`;
   }
 }
 
@@ -384,6 +409,7 @@ function patchOpenModal() {
 // Patch entry column headers and labels after a name change without resetting score inputs.
 function patchEntryColumnHeaders() {
   if (!game) return;
+  const dealer = getDealerInfo(game.round);
   game.entities.forEach((e, ei) => {
     const col = document.getElementById(`col-${ei}`);
     if (!col) return;
@@ -401,7 +427,22 @@ function patchEntryColumnHeaders() {
       const saved = saveBtn.classList.contains('btn-saved');
       saveBtn.textContent = `✓ ${saved ? 'Saved' : 'Save'} — ${e.name}`;
     }
+    const dealerEl = col.querySelector('.dealer-badge');
+    if (dealerEl && dealer && dealer.entityIdx === ei) {
+      dealerEl.textContent = `🃏 Dealing: ${dealer.playerName}`;
+    }
   });
+  const dealerBlock = document.getElementById("pbar-dealer-block");
+  if (dealerBlock) {
+    const roundEl = document.getElementById("pbar-dealer-round");
+    if (roundEl) roundEl.textContent = `Round ${game.round}`;
+    const currentDealer = getDealerInfo(game.round);
+    const nextDealer    = getDealerInfo(game.round + 1);
+    const currentEl = dealerBlock.querySelector(".pbar-dealer-current strong");
+    if (currentEl && currentDealer) currentEl.textContent = currentDealer.playerName;
+    const nextEl = dealerBlock.querySelector(".pbar-dealer-next strong");
+    if (nextEl && nextDealer) nextEl.textContent = nextDealer.playerName;
+  }
 }
 
 // ── scoreboard ────────────────────────────────────────────────────────────────
@@ -613,6 +654,7 @@ function renderEntryColumns() {
   const outPi  = getOutPlayerIdx();
   const outEi  = outPi >= 0 ? players[outPi].entityIdx : -1;
   const totals = getTotals();
+  const dealer = getDealerInfo(round);
 
   cols.innerHTML = entities.map((e, ei) => {
     const isSaved    = submitted.includes(ei);
@@ -621,10 +663,13 @@ function renderEntryColumns() {
     const myPlayers  = players.map((p, pi) => ({ ...p, pi })).filter(p => p.entityIdx === ei);
     const isIndWinner = !isTeam && ei === outEi;
     const d          = isSaved ? "disabled" : "";
+    const isDealer   = dealer && dealer.entityIdx === ei;
 
-    // Player names shown as plain text (not editable here — use the players bar above)
     const teamPlayersHtml = e.players
       ? `<div class="col-players">${e.players.map(esc).join(" · ")}</div>`
+      : "";
+    const dealerHtml = isDealer
+      ? `<div class="dealer-badge">🃏 Dealing: ${esc(dealer.playerName)}</div>`
       : "";
 
     const wentOutHtml = `<div class="went-out-section">
@@ -670,9 +715,10 @@ function renderEntryColumns() {
       : `<button class="btn btn-success" style="width:100%" onclick="commitEntity(${ei})">✓ Save — ${esc(e.name)}</button>`;
 
     return `<div class="entity-col ${isSaved ? "col-saved" : ""}" id="col-${ei}">
-      <div class="entity-col-header">
+      <div class="entity-col-header ${isDealer ? "header-dealer" : ""}">
         <div class="col-name">${esc(e.name)}</div>
         ${teamPlayersHtml}
+        ${dealerHtml}
       </div>
       <div class="entity-col-body">
         ${wentOutHtml}${booksHtml}${posHtml}${negHtml}${previewHtml}
@@ -782,6 +828,7 @@ window.commitEntity = async function(ei) {
     isRemoteUpdate = false;
     renderScoreboard();
     renderMeldTable();
+    renderPlayersBar();
     window.scrollTo(0, 0);
   } else {
     const col = document.getElementById(`col-${ei}`);
