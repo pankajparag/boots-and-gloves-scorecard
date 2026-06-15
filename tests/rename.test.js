@@ -30,12 +30,15 @@ function renameEntity(game, ei, newName) {
 }
 
 function renamePlayer(game, pi, newName) {
-  const oldName = game.players[pi].name;
   game.players[pi].name = newName;
   const ei = game.players[pi].entityIdx;
   if (game.entities[ei].players) {
-    const j = game.entities[ei].players.indexOf(oldName);
-    if (j >= 0) game.entities[ei].players[j] = newName;
+    // Rebuild from game.players to match onPlayerNameInput logic in app.js
+    game.entities[ei].players = game.players
+      .filter(p => p.entityIdx === ei)
+      .map(p => p.name);
+  } else {
+    game.entities[ei].name = newName;
   }
 }
 
@@ -157,9 +160,51 @@ describe("renamePlayer — team2v2", () => {
   it("renaming to a name already held by another player is allowed", () => {
     renamePlayer(g, 0, "Ben"); // duplicate name
     expect(g.players[0].name).toBe("Ben");
-    // entities[0].players[0] was "Ann" → now "Ben"; indexOf("Ben") finds first
-    // position — this is expected/documented behaviour
+    // Rebuild mirrors game.players, so both slots become "Ben"
     expect(g.entities[0].players[0]).toBe("Ben");
+  });
+});
+
+// ── prefillSetupFromGame contract ─────────────────────────────────────────────
+// prefillSetupFromGame maps players[i].name → input id "name-{keyOrder[i]}".
+// These tests guard the player ordering assumption it relies on.
+describe("player ordering contract (used by prefillSetupFromGame)", () => {
+  it("team2v2: players are ordered [T1P1, T1P2, T2P1, T2P2]", () => {
+    const g = makeTeam2v2({ T1P1:"A", T1P2:"B", T2P1:"C", T2P2:"D" });
+    expect(g.players.map(p => p.name)).toEqual(["A","B","C","D"]);
+  });
+
+  it("ind3: players are ordered [P1, P2, P3]", () => {
+    const g = makeInd3({ P1:"X", P2:"Y", P3:"Z" });
+    expect(g.players.map(p => p.name)).toEqual(["X","Y","Z"]);
+  });
+
+  it("team3v3: players are ordered [T1P1, T1P2, T1P3, T2P1, T2P2, T2P3]", () => {
+    const g = buildGame("team3v3", 10000,
+      { T1P1:"A", T1P2:"B", T1P3:"C", T2P1:"D", T2P2:"E", T2P3:"F" },
+      "id", "code");
+    expect(g.players.map(p => p.name)).toEqual(["A","B","C","D","E","F"]);
+  });
+
+  it("team2v2: entities[0].players matches T1 player names in order", () => {
+    const g = makeTeam2v2({ T1P1:"Ann", T1P2:"Ben", T2P1:"Cal", T2P2:"Dee" });
+    expect(g.entities[0].players).toEqual(["Ann","Ben"]);
+    expect(g.entities[1].players).toEqual(["Cal","Dee"]);
+  });
+
+  it("team3v3: entities[0].players has all three T1 names", () => {
+    const g = buildGame("team3v3", 10000,
+      { T1P1:"A", T1P2:"B", T1P3:"C", T2P1:"D", T2P2:"E", T2P3:"F" },
+      "id", "code");
+    expect(g.entities[0].players).toEqual(["A","B","C"]);
+    expect(g.entities[1].players).toEqual(["D","E","F"]);
+  });
+
+  it("after renamePlayer, entities[ei].players reflects the new name (prefill would see updated name)", () => {
+    const g = makeTeam2v2({ T1P1:"Ann", T1P2:"Ben", T2P1:"Cal", T2P2:"Dee" });
+    renamePlayer(g, 0, "Zara");
+    expect(g.entities[0].players[0]).toBe("Zara");
+    expect(g.players[0].name).toBe("Zara");
   });
 });
 

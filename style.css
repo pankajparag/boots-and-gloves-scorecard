@@ -121,16 +121,18 @@
   .col-preview .prev-total{font-size:.95rem;font-weight:500;}
   .col-preview .prev-detail{font-size:.65rem;color:var(--text-muted);margin-top:2px;}
 
-  .player-setup{display:flex;gap:.5rem;flex-wrap:wrap;}
-  .player-label{display:flex;flex-direction:column;gap:2px;}
-  .player-label span{font-size:.68rem;color:var(--text-muted);}
-  .player-name-input{font-family:'IBM Plex Mono',monospace;font-size:.83rem;border:1px solid var(--border);border-radius:6px;padding:5px 8px;width:115px;background:var(--bg);}
   .empty-state{text-align:center;padding:3rem 1rem;color:var(--text-muted);font-size:.88rem;}
   .empty-state .big{font-family:'Playfair Display',serif;font-size:1.05rem;color:var(--text-light);margin-bottom:.4rem;}
 
-  /* Inline-editable name spans — appear in scoreboard header and column headers */
-  .editable-name{cursor:text;border-radius:3px;padding:1px 3px;display:inline-block;outline:none;transition:background .15s;min-width:1em;}
-  .editable-name:hover{background:rgba(255,255,255,.18);}
-  .editable-name:focus{background:rgba(255,255,255,.22);outline:1px solid var(--gold);}
-  .editable-name:empty::before{content:attr(data-orig);opacity:.5;}
+  /* Players bar — single source of truth for editing player / team names */
+  #players-bar{background:var(--black);border-bottom:2px solid var(--gold-dark);padding:.6rem 2rem;}
+  .pbar-inner{display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;}
+  .pbar-team{display:flex;flex-direction:column;gap:.35rem;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:.5rem .65rem;}
+  .pbar-entity-input{font-family:'Playfair Display',serif;font-size:.88rem;background:transparent;border:none;border-bottom:1px solid var(--gold-dark);color:var(--gold);outline:none;width:130px;padding:2px 4px;}
+  .pbar-entity-input:focus{border-bottom-color:var(--gold);background:rgba(255,255,255,.05);}
+  .pbar-players{display:flex;gap:.35rem;flex-wrap:wrap;}
+  .pbar-player-input{font-family:'IBM Plex Mono',monospace;font-size:.8rem;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.18);border-radius:5px;color:#ddd;outline:none;padding:3px 7px;width:100px;}
+  .pbar-player-input:focus{border-color:var(--gold);background:rgba(255,255,255,.12);color:white;}
+  .pbar-vs{font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:#666;padding:0 .15rem;}
+  @media(max-width:700px){#players-bar{padding:.5rem .75rem;}.pbar-entity-input{width:110px;}.pbar-player-input{width:85px;}}
   

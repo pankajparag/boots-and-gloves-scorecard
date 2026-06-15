@@ -52,8 +52,6 @@
     </div>
   </div>
 
-  <div id="player-names-setup" class="player-setup"></div>
-
   <div>
     <label>Win target (pts)</label>
     <input type="number" id="win-target" value="10000" step="500" min="1000" style="width:110px">
@@ -67,6 +65,9 @@
 <div id="game-badge" style="background:var(--black);color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:.75rem;padding:.35rem 2rem;display:none">
   Scorecard: <span id="game-code-display"></span>
 </div>
+
+<!-- Players bar — shown once a game is active; single source of truth for player names -->
+<div id="players-bar" style="display:none"></div>
 
 <!-- edit modal -->
 <div class="modal-backdrop" id="edit-modal" onclick="handleModalClick(event)">
@@ -105,6 +106,6 @@
   <option value="Abhishek">
   <option value="Gaurav">
 </datalist>
-<script type="module" src="app.js?v=5"></script>
+<script type="module" src="app.js?v=6"></script>
 </body>
 </html>
