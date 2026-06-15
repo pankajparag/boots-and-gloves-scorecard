@@ -27,7 +27,7 @@
   <div>
     <label>Game mode</label>
     <select id="game-mode" onchange="onModeChange()">
-      <option value="team2v2">Team — 2 v 2</option>
+      <option value="team2v2" selected>Team — 2 v 2</option>
       <option value="team3v3">Team — 3 v 3</option>
       <option value="ind3">Individual — 3 players</option>
       <option value="custom">Custom scorecard…</option>
@@ -55,7 +55,7 @@
 
   <div>
     <label>Win target (pts)</label>
-    <input type="number" id="win-target" value="6000" step="500" min="1000" style="width:110px">
+    <input type="number" id="win-target" value="10000" step="500" min="1000" style="width:110px">
   </div>
   <div>
     <button class="btn btn-primary" onclick="startGame()">Start / Reset game</button>
@@ -93,6 +93,17 @@
   </div>
 </div>
 
+<datalist id="preset-names">
+  <option value="Marvin">
+  <option value="Sandra">
+  <option value="Becky">
+  <option value="Pankaj">
+  <option value="Juan">
+  <option value="Laurie">
+  <option value="Frances">
+  <option value="Abhishek">
+  <option value="Gaurav">
+</datalist>
 <script type="module" src="app.js"></script>
 </body>
 </html>
