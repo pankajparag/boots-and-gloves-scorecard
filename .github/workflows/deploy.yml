@@ -35,7 +35,7 @@ jobs:
       - name: Collect web files
         run: |
           mkdir -p _site
-          cp index.html app.js game-logic.js style.css firebase-config.js firebase-config.example.js _site/
+          cp index.html app.js game-logic.js style.css firebase-config.js firebase-config.example.js favicon.svg _site/
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

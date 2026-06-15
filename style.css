@@ -70,6 +70,9 @@
   .modal-section-label{grid-column:1/-1;font-size:.65rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;padding-top:.25rem;border-top:1px solid var(--border);margin-top:.25rem;}
   .modal-check{display:flex;align-items:center;gap:7px;font-size:.82rem;}
   .modal-check input{width:14px;height:14px;accent-color:var(--green);}
+  .modal-went-out-note{font-size:.75rem;color:var(--green-dark);font-style:italic;padding:.25rem 0;}
+  .modal-leftover-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;}
+  .modal-preview{background:var(--gold-light);border:1px solid #e8cc7a;border-radius:5px;padding:.35rem .6rem;font-family:'IBM Plex Mono',monospace;font-size:.8rem;text-align:center;color:var(--text-muted);}
   .modal-actions{display:flex;gap:.5rem;margin-top:1.25rem;justify-content:flex-end;}
 
   .meld-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}

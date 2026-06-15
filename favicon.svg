@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Dark card background with gold border -->
+  <rect width="32" height="32" rx="4" fill="#1a1a2e"/>
+  <rect x="1.5" y="1.5" width="29" height="29" rx="3" fill="none" stroke="#c9a227" stroke-width="1"/>
+  <!-- Spade (top-left) -->
+  <text x="8.5" y="15" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="13" fill="#c9a227">&#9824;</text>
+  <!-- Heart (top-right) -->
+  <text x="23.5" y="15" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="13" fill="#c0392b">&#9829;</text>
+  <!-- Club (bottom-left) -->
+  <text x="8.5" y="29" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="13" fill="#c9a227">&#9827;</text>
+  <!-- Diamond (bottom-right) -->
+  <text x="23.5" y="29" text-anchor="middle" font-family="Georgia,'Times New Roman',serif" font-size="13" fill="#c0392b">&#9830;</text>
+</svg>

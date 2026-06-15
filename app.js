@@ -306,14 +306,9 @@ window.saveEntityName = async function(ei, el) {
   const newName = el.textContent.trim();
   if (!newName) { el.textContent = game.entities[ei].name; return; }
   game.entities[ei].name = newName;
-  if (!game.isTeam) game.players[ei].name = newName; // ind3: entity === player
+  if (!game.isTeam) game.players[ei].name = newName;
   el.dataset.orig = newName;
-  // Update entry column header text without resetting score inputs
-  document.querySelectorAll(`#col-${ei} .col-name .editable-name`).forEach(s => {
-    if (s !== el) { s.textContent = newName; s.dataset.orig = newName; }
-  });
-  const saveBtn = document.querySelector(`#col-${ei} .btn-success`);
-  if (saveBtn) saveBtn.textContent = `✓ Save — ${newName}`;
+  patchEntryColumnHeaders();
   isRemoteUpdate = true;
   await pushToFirebase();
   isRemoteUpdate = false;
@@ -329,25 +324,47 @@ window.savePlayerName = async function(pi, el) {
   const ei = game.players[pi].entityIdx;
   if (game.entities[ei].players) {
     const j = game.entities[ei].players.indexOf(oldName);
-    if (j >= 0) {
-      game.entities[ei].players[j] = newName;
-      // Update the sibling col-players span (same position, different element)
-      const playerSpans = document.querySelectorAll(`#col-${ei} .col-players .editable-name`);
-      if (playerSpans[j] && playerSpans[j] !== el) {
-        playerSpans[j].textContent = newName;
-        playerSpans[j].dataset.orig = newName;
-      }
-    }
+    if (j >= 0) game.entities[ei].players[j] = newName;
   }
-  // Update "Who went out?" label for this player
-  const outLabel = document.querySelector(`label[for="out-${pi}"]`);
-  if (outLabel) outLabel.textContent = newName;
   el.dataset.orig = newName;
+  patchEntryColumnHeaders();
   isRemoteUpdate = true;
   await pushToFirebase();
   isRemoteUpdate = false;
   renderScoreboard();
 };
+
+// Patch all entry column headers and labels after a rename without touching inputs.
+function patchEntryColumnHeaders() {
+  if (!game) return;
+  game.entities.forEach((e, ei) => {
+    const col = document.getElementById(`col-${ei}`);
+    if (!col) return;
+    const colName = col.querySelector('.col-name');
+    if (colName) {
+      colName.innerHTML = `<span class="editable-name" contenteditable="true" data-orig="${esc(e.name)}"
+        onblur="saveEntityName(${ei}, this)" onkeydown="handleRenameKeydown(event)">${esc(e.name)}</span>`;
+    }
+    const colPlayers = col.querySelector('.col-players');
+    if (colPlayers && e.players) {
+      colPlayers.innerHTML = e.players.map((pname, j) => {
+        const pi = findPlayerByPosition(ei, j);
+        return `<span class="editable-name" contenteditable="true" data-orig="${esc(pname)}"
+          onblur="savePlayerName(${pi}, this)" onkeydown="handleRenameKeydown(event)">${esc(pname)}</span>`;
+      }).join(' · ');
+    }
+    game.players.forEach((p, pi) => {
+      if (p.entityIdx !== ei) return;
+      const label = col.querySelector(`label[for="out-${pi}"]`);
+      if (label) label.textContent = p.name;
+    });
+    const saveBtn = col.querySelector('.btn-success, .btn-saved');
+    if (saveBtn) {
+      const saved = saveBtn.classList.contains('btn-saved');
+      saveBtn.textContent = `✓ ${saved ? 'Saved' : 'Save'} — ${e.name}`;
+    }
+  });
+}
 
 // ── scoreboard ────────────────────────────────────────────────────────────────
 function renderScoreboard() {
@@ -411,12 +428,14 @@ function renderMeldTable() {
 
 // ── edit modal ────────────────────────────────────────────────────────────────
 let editingRoundIdx = null;
+let currentModalOutEi = -1; // entity idx currently showing "Went out" in the open modal
 
 window.openEditModal = function(roundIdx) {
   editingRoundIdx = roundIdx;
   const r = game.rounds[roundIdx];
   document.getElementById("modal-title").textContent = `Edit Round ${r.round}`;
   document.getElementById("modal-fields").style.gridTemplateColumns = `repeat(${Math.min(game.entities.length, 2)}, 1fr)`;
+  currentModalOutEi = !game.isTeam && r.outPlayerIdx >= 0 ? game.players[r.outPlayerIdx].entityIdx : -1;
 
   document.getElementById("modal-fields").innerHTML = game.entities.map((e, ei) => {
     const b = r.breakdowns[ei];
@@ -426,29 +445,35 @@ window.openEditModal = function(roundIdx) {
       <input type="checkbox" id="medit-out-${p.pi}" ${b.wentOut && p.pi === r.outPlayerIdx ? "checked" : ""} onchange="onModalOutChange(${p.pi})">
       <label for="medit-out-${p.pi}">${esc(p.name)} went out</label>
     </div>`).join("");
-
+    const leftoverInner = isIndWinner
+      ? `<div class="modal-went-out-note">Went out — no leftover</div>`
+      : `<div class="modal-leftover-grid">
+          <div class="modal-field neg-field"><label>Red 3 −500</label><input type="number" min="0" id="medit-nred3-${ei}" value="${b.nred3}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${ei}" value="${b.njoker}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${ei}" value="${b.nwild}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${ei}" value="${b.nface}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field neg-field"><label>9–3 and below −5</label><input type="number" min="0" id="medit-nlow-${ei}" value="${b.nlow}" oninput="updateModalPreview(${ei})"></div>
+        </div>`;
+    const initTotal = calcTotal(b, isIndWinner);
+    const initColor = initTotal < 0 ? "var(--red)" : "var(--green-dark)";
     return `<div class="modal-entity">
       <div class="modal-entity-title">${esc(e.name)}${e.players ? "<br><span style='font-size:.65rem;opacity:.7'>" + e.players.map(esc).join(" · ") + "</span>" : ""}</div>
       <div class="modal-grid">
         <div class="modal-section-label">Who went out</div>
         <div style="grid-column:1/-1">${wentOutHtml}</div>
         <div class="modal-section-label">Books</div>
-        <div class="modal-field red-field"><label>🔴 Red books</label><input type="number" min="0" id="medit-rb-${ei}" value="${b.rb}"></div>
-        <div class="modal-field"><label>⚫ Black books</label><input type="number" min="0" id="medit-bb-${ei}" value="${b.bb}"></div>
+        <div class="modal-field red-field"><label>🔴 Red books</label><input type="number" min="0" id="medit-rb-${ei}" value="${b.rb}" oninput="updateModalPreview(${ei})"></div>
+        <div class="modal-field"><label>⚫ Black books</label><input type="number" min="0" id="medit-bb-${ei}" value="${b.bb}" oninput="updateModalPreview(${ei})"></div>
         <div class="modal-section-label">Positive cards</div>
-        <div class="modal-field"><label>Joker ×50</label><input type="number" min="0" id="medit-pjoker-${ei}" value="${b.pjoker}"></div>
-        <div class="modal-field"><label>2/Ace ×20</label><input type="number" min="0" id="medit-pwild-${ei}" value="${b.pwild}"></div>
-        <div class="modal-field"><label>K–10 ×10</label><input type="number" min="0" id="medit-pface-${ei}" value="${b.pface}"></div>
-        <div class="modal-field"><label>9–4 ×5</label><input type="number" min="0" id="medit-plow-${ei}" value="${b.plow}"></div>
+        <div class="modal-field"><label>Joker ×50</label><input type="number" min="0" id="medit-pjoker-${ei}" value="${b.pjoker}" oninput="updateModalPreview(${ei})"></div>
+        <div class="modal-field"><label>2/Ace ×20</label><input type="number" min="0" id="medit-pwild-${ei}" value="${b.pwild}" oninput="updateModalPreview(${ei})"></div>
+        <div class="modal-field"><label>K–10 ×10</label><input type="number" min="0" id="medit-pface-${ei}" value="${b.pface}" oninput="updateModalPreview(${ei})"></div>
+        <div class="modal-field"><label>9–4 ×5</label><input type="number" min="0" id="medit-plow-${ei}" value="${b.plow}" oninput="updateModalPreview(${ei})"></div>
         <div class="modal-section-label">Leftover (−)</div>
-        ${isIndWinner
-          ? `<div style="grid-column:1/-1;font-size:.75rem;color:var(--green-dark);font-style:italic">Went out — no leftover</div>`
-          : `<div class="modal-field neg-field"><label>Red 3 −500</label><input type="number" min="0" id="medit-nred3-${ei}" value="${b.nred3}"></div>
-             <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${ei}" value="${b.njoker}"></div>
-             <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${ei}" value="${b.nwild}"></div>
-             <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${ei}" value="${b.nface}"></div>
-             <div class="modal-field neg-field"><label>9–3 and below −5</label><input type="number" min="0" id="medit-nlow-${ei}" value="${b.nlow}"></div>`
-        }
+        <div id="modal-leftover-${ei}" style="grid-column:1/-1">${leftoverInner}</div>
+        <div id="modal-preview-${ei}" class="modal-preview" style="grid-column:1/-1">
+          Round total: <strong style="color:${initColor}">${initTotal >= 0 ? "+" : ""}${initTotal}</strong>
+        </div>
       </div>
     </div>`;
   }).join("");
@@ -459,6 +484,59 @@ window.onModalOutChange = function(clickedPi) {
   game.players.forEach((_, pi) => {
     if (pi !== clickedPi) { const el = document.getElementById(`medit-out-${pi}`); if (el) el.checked = false; }
   });
+  if (!game.isTeam) {
+    let outPi = -1;
+    for (let pi = 0; pi < game.players.length; pi++) {
+      const el = document.getElementById(`medit-out-${pi}`);
+      if (el && el.checked) { outPi = pi; break; }
+    }
+    const newOutEi = outPi >= 0 ? game.players[outPi].entityIdx : -1;
+    if (newOutEi !== currentModalOutEi) {
+      if (currentModalOutEi >= 0) {
+        const b = game.rounds[editingRoundIdx].breakdowns[currentModalOutEi];
+        const div = document.getElementById(`modal-leftover-${currentModalOutEi}`);
+        if (div) div.innerHTML = `<div class="modal-leftover-grid">
+          <div class="modal-field neg-field"><label>Red 3 −500</label><input type="number" min="0" id="medit-nred3-${currentModalOutEi}" value="${b.nred3}" oninput="updateModalPreview(${currentModalOutEi})"></div>
+          <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${currentModalOutEi}" value="${b.njoker}" oninput="updateModalPreview(${currentModalOutEi})"></div>
+          <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${currentModalOutEi}" value="${b.nwild}" oninput="updateModalPreview(${currentModalOutEi})"></div>
+          <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${currentModalOutEi}" value="${b.nface}" oninput="updateModalPreview(${currentModalOutEi})"></div>
+          <div class="modal-field neg-field"><label>9–3 and below −5</label><input type="number" min="0" id="medit-nlow-${currentModalOutEi}" value="${b.nlow}" oninput="updateModalPreview(${currentModalOutEi})"></div>
+        </div>`;
+      }
+      if (newOutEi >= 0) {
+        const div = document.getElementById(`modal-leftover-${newOutEi}`);
+        if (div) div.innerHTML = `<div class="modal-went-out-note">Went out — no leftover</div>`;
+      }
+      currentModalOutEi = newOutEi;
+    }
+  }
+  game.entities.forEach((_, ei) => updateModalPreview(ei));
+};
+
+window.updateModalPreview = function(ei) {
+  if (editingRoundIdx === null || !game) return;
+  let outPi = -1;
+  for (let pi = 0; pi < game.players.length; pi++) {
+    const el = document.getElementById(`medit-out-${pi}`);
+    if (el && el.checked) { outPi = pi; break; }
+  }
+  const isIndWinner = !game.isTeam && outPi >= 0 && game.players[outPi].entityIdx === ei;
+  const mn = f => parseInt(document.getElementById(`medit-${f}-${ei}`)?.value) || 0;
+  const b = {
+    rb: mn("rb"), bb: mn("bb"),
+    wentOut: outPi >= 0 && game.players[outPi].entityIdx === ei,
+    pjoker: mn("pjoker"), pwild: mn("pwild"), pface: mn("pface"), plow: mn("plow"),
+    nred3:  isIndWinner ? 0 : mn("nred3"),
+    njoker: isIndWinner ? 0 : mn("njoker"),
+    nwild:  isIndWinner ? 0 : mn("nwild"),
+    nface:  isIndWinner ? 0 : mn("nface"),
+    nlow:   isIndWinner ? 0 : mn("nlow"),
+  };
+  const total = calcTotal(b, isIndWinner);
+  const el = document.getElementById(`modal-preview-${ei}`);
+  if (!el) return;
+  const color = total < 0 ? "var(--red)" : "var(--green-dark)";
+  el.innerHTML = `Round total: <strong style="color:${color}">${total >= 0 ? "+" : ""}${total}</strong>`;
 };
 
 window.saveEdit = async function() {
