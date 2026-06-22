@@ -3,7 +3,8 @@ import {
   ref, set, onValue, get
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import {
-  getBrackets, getMeld, isTeamMode, calcTotal, checkWinner, buildGame
+  getBrackets, getMeld, isTeamMode, calcTotal, checkWinner, buildGame,
+  canFinalize, computeFinalOutPi, buildBreakdownsFromDrafts
 } from "./game-logic.js";
 
 // ── Firebase paths ────────────────────────────────────────────────────────────
@@ -20,11 +21,17 @@ let game = null;
 let currentGameId = null;
 let currentGameCode = null;
 let syncUnsubscribe = null;
+let draftsUnsubscribe = null;
 let isRemoteUpdate = false;
-let renameTimer = null; // debounce timer for name-change Firebase push
+let isFinalizingRound = false;
+let renameTimer = null;
+let draftTimers = {};    // ei → debounce timer for live draft push
+let localEditTime = {};  // ei → timestamp of last local keystroke
+let currentDrafts = {};  // latest snapshot from drafts/{id} in Firebase
 
 // ── Firebase sync ─────────────────────────────────────────────────────────────
-function gameRef(id) { return ref(db, "games/" + (id || currentGameId)); }
+function gameRef(id)   { return ref(db, "games/"  + (id || currentGameId)); }
+function draftsRef(id) { return ref(db, "drafts/" + (id || currentGameId)); }
 
 async function pushToFirebase() {
   if (!currentGameId) return;
@@ -51,14 +58,17 @@ async function pushToFirebase() {
 
 function subscribeToFirebase(gameId) {
   if (syncUnsubscribe) { syncUnsubscribe(); syncUnsubscribe = null; }
+  subscribeToDrafts(gameId);
   const path = gameRef(gameId);
   syncUnsubscribe = onValue(path, snapshot => {
     if (isRemoteUpdate) return;
     const data = snapshot.val();
     if (!data) { setStatus("synced"); return; }
     if (!game) { setStatus("synced"); return; }
-    const sub = game.submitted || [];
-    const pen = game.pending   || {};
+    const roundChanged = data.round !== game.round;
+    if (roundChanged) { currentDrafts = {}; localEditTime = {}; }
+    const sub = roundChanged ? [] : (game.submitted || []);
+    const pen = roundChanged ? {} : (game.pending   || {});
     game = { ...data, rounds: toArray(data.rounds), entities: toArray(data.entities), players: toArray(data.players), submitted: sub, pending: pen };
     currentGameId   = data.gameId   || gameId;
     currentGameCode = data.gameCode || "";
@@ -70,6 +80,136 @@ function subscribeToFirebase(gameId) {
     setStatus("error");
     console.error("Firebase subscribe error:", err);
   });
+}
+
+// ── draft sync (live per-keystroke Firebase updates) ──────────────────────────
+function subscribeToDrafts(gameId) {
+  if (draftsUnsubscribe) { draftsUnsubscribe(); draftsUnsubscribe = null; }
+  draftsUnsubscribe = onValue(ref(db, "drafts/" + gameId), snapshot => {
+    currentDrafts = snapshot.val() || {};
+    if (!game) return;
+    const entryArea = document.getElementById("entry-area");
+    if (entryArea && entryArea.style.display !== "none") applyDraftsToUI(currentDrafts);
+    if (shouldFinalize(currentDrafts) && !isFinalizingRound) {
+      isFinalizingRound = true;
+      finalizeRound(currentDrafts).catch(e => { console.error(e); isFinalizingRound = false; });
+    }
+  });
+}
+
+async function pushDraft(ei, committed = false) {
+  if (!currentGameId || !game) return;
+  const b = readBreakdownFromDOM(ei);
+  const outPi = getOutPlayerIdx();
+  try {
+    await set(ref(db, "drafts/" + currentGameId + "/" + ei), { ...b, outPi, committed, round: game.round });
+  } catch (e) { console.error("Draft push error:", e); }
+}
+
+function scheduleDraftPush(ei) {
+  localEditTime[ei] = Date.now();
+  clearTimeout(draftTimers[ei]);
+  draftTimers[ei] = setTimeout(() => {
+    if (game && !game.submitted.includes(ei)) pushDraft(ei, false);
+  }, 400);
+}
+
+const DRAFT_FIELDS = ['rb','bb','pjoker','pwild','pface','plow','nred3','njoker','nwild','nface','nlow'];
+
+function applyDraftsToUI(drafts) {
+  if (!game) return;
+  game.entities.forEach((e, ei) => {
+    const draft = drafts[ei];
+    if (!draft || draft.round !== game.round) return;
+    const col = document.getElementById(`col-${ei}`);
+    if (!col) return;
+
+    // Only apply values if user hasn't typed in this column in the last 2 s
+    if (!localEditTime[ei] || Date.now() - localEditTime[ei] >= 2000) {
+      DRAFT_FIELDS.forEach(f => {
+        const inp = document.getElementById(`${f}-${ei}`);
+        if (inp) inp.value = draft[f] ?? 0;
+      });
+      updateColPreview(ei);
+    }
+
+    // Live "entering…" badge in the column header
+    const headerEl = col.querySelector('.entity-col-header');
+    if (headerEl) {
+      let badge = col.querySelector('.draft-badge');
+      if (!draft.committed) {
+        if (!badge) { badge = document.createElement('div'); badge.className = 'draft-badge'; headerEl.appendChild(badge); }
+        badge.textContent = '✏ entering…';
+      } else if (badge) {
+        badge.remove();
+      }
+    }
+
+    // Mark column as saved when remote commit arrives
+    if (draft.committed && !game.submitted.includes(ei)) {
+      game.submitted.push(ei);
+      markEntitySaved(ei);
+    }
+  });
+}
+
+function markEntitySaved(ei) {
+  const col = document.getElementById(`col-${ei}`);
+  if (!col) return;
+  // Restore the actual submitted values from current drafts (if available) before disabling
+  const draft = currentDrafts[ei];
+  if (draft) {
+    DRAFT_FIELDS.forEach(f => { const inp = document.getElementById(`${f}-${ei}`); if (inp) inp.value = draft[f] ?? 0; });
+  }
+  col.classList.add("col-saved");
+  const btn = col.querySelector(".btn-success");
+  if (btn) { btn.className = "btn btn-saved"; btn.disabled = true; btn.textContent = `✓ Saved — ${game.entities[ei].name}`; }
+  DRAFT_FIELDS.forEach(f => { const inp = document.getElementById(`${f}-${ei}`); if (inp) inp.disabled = true; });
+  game.players.forEach((p, pi) => {
+    if (p.entityIdx === ei) { const el = document.getElementById(`out-${pi}`); if (el) el.disabled = true; }
+  });
+  updateColPreview(ei);
+}
+
+function shouldFinalize(drafts) {
+  if (!game) return false;
+  return canFinalize(drafts, game.round, game.entities.length);
+}
+
+async function finalizeRound(drafts) {
+  if (!game || !currentGameId) return;
+  const finalOutPi  = computeFinalOutPi(drafts, game.entities.length);
+  const breakdowns  = buildBreakdownsFromDrafts(drafts, game.entities, game.players, game.isTeam, finalOutPi);
+
+  game.rounds.push({ round: game.round, outPlayerIdx: finalOutPi, breakdowns });
+  game.round++;
+  game.submitted = [];
+  game.pending   = {};
+  localEditTime  = {};
+  currentDrafts  = {};
+
+  try {
+    await set(draftsRef(), null);
+    const totals = getTotals();
+    const winner = checkWinner(totals, game.target);
+    isRemoteUpdate = true;
+    await pushToFirebase();
+    isRemoteUpdate = false;
+    if (winner >= 0) {
+      document.getElementById("winner-banner").textContent =
+        `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
+      document.getElementById("winner-banner").classList.add("visible");
+      document.getElementById("entry-area").style.display = "none";
+    } else {
+      renderEntryColumns();
+    }
+    renderScoreboard();
+    renderMeldTable();
+    renderPlayersBar();
+    window.scrollTo(0, 0);
+  } finally {
+    isFinalizingRound = false;
+  }
 }
 
 function setStatus(state) {
@@ -284,6 +424,13 @@ window.startGame = async function() {
   localStorage.setItem("bnag-lastGameId",   gameId);
   localStorage.setItem("bnag-lastGameCode", gameCode);
 
+  // Clear stale drafts from any previous game at this path before writing fresh state
+  currentDrafts = {};
+  localEditTime = {};
+  // Silently ignore permission errors — if the Firebase rules don't yet include
+  // the drafts path the game start should still succeed.
+  try { await set(draftsRef(gameId), null); } catch (_) {}
+
   isRemoteUpdate = true;
   await pushToFirebase();
   isRemoteUpdate = false;
@@ -458,7 +605,7 @@ function renderScoreboard() {
   }).join("");
 
   let html = `<div class="scoreboard-header" style="${gridStyle(n)}">
-    <div>Rd</div>${headerCells}
+    <div>Round</div>${headerCells}
   </div>`;
 
   if (!rounds.length) {
@@ -683,29 +830,29 @@ function renderEntryColumns() {
     const booksHtml = `<div>
       <div class="col-section-label">Books</div>
       <div class="books-row">
-        <div class="book-field red"><label>🔴 Red ×500</label><input type="number" min="0" value="0" id="rb-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-        <div class="book-field black"><label>⚫ Black ×300</label><input type="number" min="0" value="0" id="bb-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+        <div class="book-field red"><label>🔴 Red ×500</label><input type="number" min="0" value="0" id="rb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+        <div class="book-field black"><label>⚫ Black ×300</label><input type="number" min="0" value="0" id="bb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
       </div>
     </div>`;
 
     const posHtml = `<div>
       <div class="col-section-label">Cards scored (+)</div>
       <div class="card-grid-2">
-        <div class="cf"><label>Joker ×50</label><input type="number" min="0" value="0" id="pjoker-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-        <div class="cf"><label>2/Ace ×20</label><input type="number" min="0" value="0" id="pwild-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-        <div class="cf"><label>K–10 ×10</label><input type="number" min="0" value="0" id="pface-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-        <div class="cf"><label>9–4 ×5</label><input type="number" min="0" value="0" id="plow-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+        <div class="cf"><label>Joker ×50</label><input type="number" min="0" value="0" id="pjoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+        <div class="cf"><label>2/Ace ×20</label><input type="number" min="0" value="0" id="pwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+        <div class="cf"><label>K–10 ×10</label><input type="number" min="0" value="0" id="pface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+        <div class="cf"><label>9–4 ×5</label><input type="number" min="0" value="0" id="plow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
       </div>
     </div>`;
 
     const negInner = isIndWinner
       ? `<div class="neg-gone-out">Went out — no leftover</div>`
       : `<div class="card-grid-2" id="neg-wrap-${ei}">
-          <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-          <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+          <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+          <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+          <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+          <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+          <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
         </div>`;
     const negHtml = `<div class="neg-block" id="neg-block-${ei}"><div class="col-section-label">Leftover (−)</div>${negInner}</div>`;
 
@@ -748,15 +895,18 @@ window.onOutChange = function(clickedPi) {
       block.innerHTML = `<div class="col-section-label">Leftover (−)</div>` + (isWinner
         ? `<div class="neg-gone-out">Went out — no leftover</div>`
         : `<div class="card-grid-2" id="neg-wrap-${ei}">
-            <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-            <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-            <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-            <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
-            <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="updateColPreview(${ei})"></div>
+            <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+            <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+            <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+            <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+            <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
           </div>`);
     });
   }
-  game.entities.forEach((_, ei) => updateColPreview(ei));
+  game.entities.forEach((_, ei) => {
+    updateColPreview(ei);
+    if (!game.submitted.includes(ei)) scheduleDraftPush(ei);
+  });
 };
 
 function readBreakdownFromDOM(ei) {
@@ -791,57 +941,20 @@ window.updateColPreview = function(ei) {
     <div class="prev-detail">${b.rb*500+b.bb*300} bks · ${b.wentOut?100:0} win · +${b.pjoker*50+b.pwild*20+b.pface*10+b.plow*5} cards · ${neg} left</div>`;
 };
 
+window.onEntryInput = function(ei) {
+  updateColPreview(ei);
+  scheduleDraftPush(ei);
+};
+
 window.commitEntity = async function(ei) {
-  if (game.submitted.includes(ei)) return;
-  const outPi = getOutPlayerIdx();
-  game.pending[ei] = { breakdown: readBreakdownFromDOM(ei), outPi };
+  if (!game || game.submitted.includes(ei)) return;
+  // Mark saved locally immediately so the UI responds without waiting for Firebase
   game.submitted.push(ei);
-
-  if (game.submitted.length === game.entities.length) {
-    let finalOutPi = -1;
-    game.entities.forEach((_, i) => { if (game.pending[i].outPi >= 0) finalOutPi = game.pending[i].outPi; });
-    const breakdowns = game.entities.map((_, i) => {
-      const b = { ...game.pending[i].breakdown };
-      const isIndWinner = !game.isTeam && game.players[finalOutPi] && game.players[finalOutPi].entityIdx === i;
-      if (isIndWinner) { b.nred3=0; b.njoker=0; b.nwild=0; b.nface=0; b.nlow=0; }
-      b.wentOut = finalOutPi >= 0 && game.players[finalOutPi].entityIdx === i;
-      b.total = calcTotal(b, isIndWinner);
-      return b;
-    });
-    game.rounds.push({ round: game.round, outPlayerIdx: finalOutPi, breakdowns });
-    game.round++;
-    game.submitted = [];
-    game.pending   = {};
-
-    const totals = getTotals();
-    const winner  = checkWinner(totals, game.target);
-    if (winner >= 0) {
-      document.getElementById("winner-banner").textContent =
-        `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
-      document.getElementById("winner-banner").classList.add("visible");
-      document.getElementById("entry-area").style.display = "none";
-    } else {
-      renderEntryColumns();
-    }
-    isRemoteUpdate = true;
-    await pushToFirebase();
-    isRemoteUpdate = false;
-    renderScoreboard();
-    renderMeldTable();
-    renderPlayersBar();
-    window.scrollTo(0, 0);
-  } else {
-    const col = document.getElementById(`col-${ei}`);
-    if (col) col.classList.add("col-saved");
-    const btn = col ? col.querySelector(".btn-success") : null;
-    if (btn) { btn.className = "btn btn-saved"; btn.disabled = true; btn.textContent = `✓ Saved — ${game.entities[ei].name}`; }
-    ["rb","bb","pjoker","pwild","pface","plow","nred3","njoker","nwild","nface","nlow"].forEach(p => {
-      const inp = document.getElementById(`${p}-${ei}`); if (inp) inp.disabled = true;
-    });
-    game.players.forEach((p, pi) => {
-      if (p.entityIdx === ei) { const el = document.getElementById(`out-${pi}`); if (el) el.disabled = true; }
-    });
-  }
+  clearTimeout(draftTimers[ei]);
+  markEntitySaved(ei);
+  // Push committed draft — all clients see this via subscribeToDrafts; finalization
+  // happens there once every entity is committed.
+  await pushDraft(ei, true);
 };
 
 function renderAll() {
@@ -850,6 +963,10 @@ function renderAll() {
   renderMeldTable();
   if (document.getElementById("entry-area").style.display !== "none") {
     renderEntryColumns();
+    // After re-rendering columns, restore current draft values (clears localEditTime so
+    // all values are re-applied, recovering from the input reset that renderEntryColumns causes).
+    localEditTime = {};
+    if (Object.keys(currentDrafts).length > 0) applyDraftsToUI(currentDrafts);
   }
 }
 

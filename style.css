@@ -92,6 +92,8 @@
   .entity-col-header .col-name{font-family:'Playfair Display',serif;font-size:1rem;}
   .entity-col-header .col-players{font-size:.75rem;color:#ccc;margin-top:2px;}
   .dealer-badge{display:inline-block;margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:500;background:var(--gold);color:var(--black);border-radius:4px;padding:2px 8px;letter-spacing:.03em;}
+  .draft-badge{display:inline-block;margin-top:4px;font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:#aaa;letter-spacing:.03em;animation:draft-pulse 1.4s ease-in-out infinite;}
+  @keyframes draft-pulse{0%,100%{opacity:.5}50%{opacity:1}}
   .entity-col-body{padding:.85rem;flex:1;display:flex;flex-direction:column;gap:.7rem;}
 
   .col-section-label{font-size:.75rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:500;margin-bottom:.35rem;}

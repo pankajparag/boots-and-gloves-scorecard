@@ -43,6 +43,46 @@ export function checkWinner(totals, target) {
   return -1;
 }
 
+// ── draft / round-finalization helpers (pure, no Firebase/DOM) ────────────────
+
+// Returns true when every entity slot in `drafts` is committed for `currentRound`.
+export function canFinalize(drafts, currentRound, entityCount) {
+  for (let ei = 0; ei < entityCount; ei++) {
+    const d = drafts[ei];
+    if (!d || d.committed !== true || d.round !== currentRound) return false;
+  }
+  return true;
+}
+
+// Finds the outPi (player index) across all entity drafts; -1 if nobody went out.
+export function computeFinalOutPi(drafts, entityCount) {
+  let finalOutPi = -1;
+  for (let ei = 0; ei < entityCount; ei++) {
+    if ((drafts[ei]?.outPi ?? -1) >= 0) finalOutPi = drafts[ei].outPi;
+  }
+  return finalOutPi;
+}
+
+// Converts entity drafts into finalized breakdown objects ready for game.rounds.
+export function buildBreakdownsFromDrafts(drafts, entities, players, isTeam, finalOutPi) {
+  return entities.map((_, ei) => {
+    const d = drafts[ei] || {};
+    const isIndWinner = !isTeam && players[finalOutPi]?.entityIdx === ei;
+    const b = {
+      rb: d.rb||0, bb: d.bb||0,
+      pjoker: d.pjoker||0, pwild: d.pwild||0, pface: d.pface||0, plow: d.plow||0,
+      nred3:  isIndWinner ? 0 : (d.nred3||0),
+      njoker: isIndWinner ? 0 : (d.njoker||0),
+      nwild:  isIndWinner ? 0 : (d.nwild||0),
+      nface:  isIndWinner ? 0 : (d.nface||0),
+      nlow:   isIndWinner ? 0 : (d.nlow||0),
+    };
+    b.wentOut = finalOutPi >= 0 && players[finalOutPi]?.entityIdx === ei;
+    b.total   = calcTotal(b, isIndWinner);
+    return b;
+  });
+}
+
 export function buildGame(mode, target, playerNames, gameId, gameCode) {
   const n = id => playerNames[id] || id;
   const base = { mode, isTeam: isTeamMode(mode), target, gameId, gameCode,
