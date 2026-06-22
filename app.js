@@ -151,6 +151,17 @@ function applyDraftsToUI(drafts) {
       markEntitySaved(ei);
     }
   });
+
+  // If any committed draft has a player going out, lock "who went out" for all other entities
+  let wentOutEntityIdx = -1;
+  Object.keys(drafts).forEach(eiStr => {
+    const d = drafts[eiStr];
+    if (d && d.committed && d.outPi >= 0 && d.round === game.round) {
+      const p = game.players[d.outPi];
+      if (p) wentOutEntityIdx = p.entityIdx;
+    }
+  });
+  if (wentOutEntityIdx >= 0) disableWentOutForOthers(wentOutEntityIdx);
 }
 
 function markEntitySaved(ei) {
@@ -256,6 +267,21 @@ function gridStyle(n) { return `grid-template-columns:72px repeat(${n},1fr)`; }
 function getOutPlayerIdx() {
   for (let i = 0; i < game.players.length; i++) if (chk(`out-${i}`)) return i;
   return -1;
+}
+function disableWentOutForOthers(outEntityIdx) {
+  if (!game) return;
+  game.players.forEach((p, pi) => {
+    if (p.entityIdx !== outEntityIdx) {
+      const el = document.getElementById(`out-${pi}`);
+      if (el) { el.disabled = true; el.checked = false; }
+    }
+  });
+  game.entities.forEach((_, ei) => {
+    if (ei !== outEntityIdx) {
+      const section = document.getElementById(`col-${ei}`)?.querySelector('.went-out-section');
+      if (section) section.classList.add('went-out-inactive');
+    }
+  });
 }
 function findPlayerByPosition(ei, posInTeam) {
   let count = 0;
@@ -666,33 +692,37 @@ window.openEditModal = function(roundIdx) {
     </div>`).join("");
     const leftoverInner = isIndWinner
       ? `<div class="modal-went-out-note">Went out — no leftover</div>`
-      : `<div class="modal-leftover-grid">
-          <div class="modal-field neg-field"><label>Red 3 −500</label><input type="number" min="0" id="medit-nred3-${ei}" value="${b.nred3}" oninput="updateModalPreview(${ei})"></div>
-          <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${ei}" value="${b.njoker}" oninput="updateModalPreview(${ei})"></div>
-          <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${ei}" value="${b.nwild}" oninput="updateModalPreview(${ei})"></div>
-          <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${ei}" value="${b.nface}" oninput="updateModalPreview(${ei})"></div>
-          <div class="modal-field neg-field"><label>9–3 and below −5</label><input type="number" min="0" id="medit-nlow-${ei}" value="${b.nlow}" oninput="updateModalPreview(${ei})"></div>
-        </div>`;
+      : `<div class="modal-field neg-field"><label>Red3 −500</label><input type="number" min="0" id="medit-nred3-${ei}" value="${b.nred3}" oninput="updateModalPreview(${ei})"></div>
+         <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${ei}" value="${b.njoker}" oninput="updateModalPreview(${ei})"></div>
+         <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${ei}" value="${b.nwild}" oninput="updateModalPreview(${ei})"></div>
+         <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${ei}" value="${b.nface}" oninput="updateModalPreview(${ei})"></div>
+         <div class="modal-field neg-field"><label>9–3 −5</label><input type="number" min="0" id="medit-nlow-${ei}" value="${b.nlow}" oninput="updateModalPreview(${ei})"></div>`;
     const initTotal = calcTotal(b, isIndWinner);
     const initColor = initTotal < 0 ? "var(--red)" : "var(--green-dark)";
     return `<div class="modal-entity">
       <div class="modal-entity-title" id="modal-entity-title-${ei}">${esc(e.name)}${e.players ? "<br><span style='font-size:.65rem;opacity:.7'>" + e.players.map(esc).join(" · ") + "</span>" : ""}</div>
-      <div class="modal-grid">
-        <div class="modal-section-label">Who went out</div>
-        <div style="grid-column:1/-1">${wentOutHtml}</div>
-        <div class="modal-section-label">Books</div>
-        <div class="modal-field red-field"><label>🔴 Red books</label><input type="number" min="0" id="medit-rb-${ei}" value="${b.rb}" oninput="updateModalPreview(${ei})"></div>
-        <div class="modal-field"><label>⚫ Black books</label><input type="number" min="0" id="medit-bb-${ei}" value="${b.bb}" oninput="updateModalPreview(${ei})"></div>
-        <div class="modal-section-label">Positive cards</div>
-        <div class="modal-field"><label>Joker ×50</label><input type="number" min="0" id="medit-pjoker-${ei}" value="${b.pjoker}" oninput="updateModalPreview(${ei})"></div>
-        <div class="modal-field"><label>2/Ace ×20</label><input type="number" min="0" id="medit-pwild-${ei}" value="${b.pwild}" oninput="updateModalPreview(${ei})"></div>
-        <div class="modal-field"><label>K–10 ×10</label><input type="number" min="0" id="medit-pface-${ei}" value="${b.pface}" oninput="updateModalPreview(${ei})"></div>
-        <div class="modal-field"><label>9–4 ×5</label><input type="number" min="0" id="medit-plow-${ei}" value="${b.plow}" oninput="updateModalPreview(${ei})"></div>
-        <div class="modal-section-label">Leftover (−)</div>
-        <div id="modal-leftover-${ei}" style="grid-column:1/-1">${leftoverInner}</div>
-        <div id="modal-preview-${ei}" class="modal-preview" style="grid-column:1/-1">
-          Round total: <strong style="color:${initColor}">${initTotal >= 0 ? "+" : ""}${initTotal}</strong>
+      <div style="margin-bottom:.5rem">
+        <div class="modal-section-label" style="grid-column:unset">Who went out</div>
+        ${wentOutHtml}
+      </div>
+      <div class="modal-score-cols">
+        <div class="modal-score-col-pos">
+          <div class="modal-section-label" style="grid-column:unset;border-top:none;padding-top:0;margin-top:0">Books</div>
+          <div class="modal-field red-field"><label>🔴 Red ×500</label><input type="number" min="0" id="medit-rb-${ei}" value="${b.rb}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field"><label>⚫ Black ×300</label><input type="number" min="0" id="medit-bb-${ei}" value="${b.bb}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-section-label" style="grid-column:unset">Positive</div>
+          <div class="modal-field"><label>Joker ×50</label><input type="number" min="0" id="medit-pjoker-${ei}" value="${b.pjoker}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field"><label>2/Ace ×20</label><input type="number" min="0" id="medit-pwild-${ei}" value="${b.pwild}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field"><label>K–10 ×10</label><input type="number" min="0" id="medit-pface-${ei}" value="${b.pface}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field"><label>9–4 ×5</label><input type="number" min="0" id="medit-plow-${ei}" value="${b.plow}" oninput="updateModalPreview(${ei})"></div>
         </div>
+        <div class="modal-score-col-neg" id="modal-leftover-${ei}">
+          <div class="modal-section-label" style="grid-column:unset;border-top:none;padding-top:0;margin-top:0;color:var(--red-dark)">Leftover</div>
+          ${leftoverInner}
+        </div>
+      </div>
+      <div id="modal-preview-${ei}" class="modal-preview" style="margin-top:.6rem">
+        Round total: <strong style="color:${initColor}">${initTotal >= 0 ? "+" : ""}${initTotal}</strong>
       </div>
     </div>`;
   }).join("");
@@ -714,17 +744,17 @@ window.onModalOutChange = function(clickedPi) {
       if (currentModalOutEi >= 0) {
         const b = game.rounds[editingRoundIdx].breakdowns[currentModalOutEi];
         const div = document.getElementById(`modal-leftover-${currentModalOutEi}`);
-        if (div) div.innerHTML = `<div class="modal-leftover-grid">
-          <div class="modal-field neg-field"><label>Red 3 −500</label><input type="number" min="0" id="medit-nred3-${currentModalOutEi}" value="${b.nred3}" oninput="updateModalPreview(${currentModalOutEi})"></div>
+        if (div) div.innerHTML = `<div class="modal-section-label" style="grid-column:unset;border-top:none;padding-top:0;margin-top:0;color:var(--red-dark)">Leftover</div>
+          <div class="modal-field neg-field"><label>Red3 −500</label><input type="number" min="0" id="medit-nred3-${currentModalOutEi}" value="${b.nred3}" oninput="updateModalPreview(${currentModalOutEi})"></div>
           <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${currentModalOutEi}" value="${b.njoker}" oninput="updateModalPreview(${currentModalOutEi})"></div>
           <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${currentModalOutEi}" value="${b.nwild}" oninput="updateModalPreview(${currentModalOutEi})"></div>
           <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${currentModalOutEi}" value="${b.nface}" oninput="updateModalPreview(${currentModalOutEi})"></div>
-          <div class="modal-field neg-field"><label>9–3 and below −5</label><input type="number" min="0" id="medit-nlow-${currentModalOutEi}" value="${b.nlow}" oninput="updateModalPreview(${currentModalOutEi})"></div>
-        </div>`;
+          <div class="modal-field neg-field"><label>9–3 −5</label><input type="number" min="0" id="medit-nlow-${currentModalOutEi}" value="${b.nlow}" oninput="updateModalPreview(${currentModalOutEi})"></div>`;
       }
       if (newOutEi >= 0) {
         const div = document.getElementById(`modal-leftover-${newOutEi}`);
-        if (div) div.innerHTML = `<div class="modal-went-out-note">Went out — no leftover</div>`;
+        if (div) div.innerHTML = `<div class="modal-section-label" style="grid-column:unset;border-top:none;padding-top:0;margin-top:0;color:var(--red-dark)">Leftover</div>
+          <div class="modal-went-out-note">Went out — no leftover</div>`;
       }
       currentModalOutEi = newOutEi;
     }
@@ -827,34 +857,28 @@ function renderEntryColumns() {
       </div>`).join("")}
     </div>`;
 
-    const booksHtml = `<div>
+    const posColHtml = `<div class="score-col-pos">
       <div class="col-section-label">Books</div>
-      <div class="books-row">
-        <div class="book-field red"><label>🔴 Red ×500</label><input type="number" min="0" value="0" id="rb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-        <div class="book-field black"><label>⚫ Black ×300</label><input type="number" min="0" value="0" id="bb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-      </div>
-    </div>`;
-
-    const posHtml = `<div>
-      <div class="col-section-label">Cards scored (+)</div>
-      <div class="card-grid-2">
-        <div class="cf"><label>Joker ×50</label><input type="number" min="0" value="0" id="pjoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-        <div class="cf"><label>2/Ace ×20</label><input type="number" min="0" value="0" id="pwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-        <div class="cf"><label>K–10 ×10</label><input type="number" min="0" value="0" id="pface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-        <div class="cf"><label>9–4 ×5</label><input type="number" min="0" value="0" id="plow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-      </div>
+      <div class="book-field red"><label>🔴 Red ×500</label><input type="number" min="0" value="0" id="rb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="book-field black"><label>⚫ Black ×300</label><input type="number" min="0" value="0" id="bb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="col-section-label" style="margin-top:.3rem">Cards scored</div>
+      <div class="cf"><label>Joker ×50</label><input type="number" min="0" value="0" id="pjoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="cf"><label>2/Ace ×20</label><input type="number" min="0" value="0" id="pwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="cf"><label>K–10 ×10</label><input type="number" min="0" value="0" id="pface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="cf"><label>9–4 ×5</label><input type="number" min="0" value="0" id="plow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
     </div>`;
 
     const negInner = isIndWinner
       ? `<div class="neg-gone-out">Went out — no leftover</div>`
-      : `<div class="card-grid-2" id="neg-wrap-${ei}">
-          <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-          <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-          <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-          <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-          <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-        </div>`;
-    const negHtml = `<div class="neg-block" id="neg-block-${ei}"><div class="col-section-label">Leftover (−)</div>${negInner}</div>`;
+      : `<div class="neg-cf"><label>Red3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+         <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+         <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+         <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+         <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>`;
+    const negColHtml = `<div class="score-col-neg neg-block" id="neg-block-${ei}">
+      <div class="col-section-label">Leftover</div>
+      ${negInner}
+    </div>`;
 
     const previewHtml = `<div class="col-preview" id="preview-${ei}"><div class="prev-total">—</div><div class="prev-detail">Enter scores above</div></div>`;
     const saveHtml = isSaved
@@ -868,7 +892,7 @@ function renderEntryColumns() {
         ${dealerHtml}
       </div>
       <div class="entity-col-body">
-        ${wentOutHtml}${booksHtml}${posHtml}${negHtml}${previewHtml}
+        ${wentOutHtml}<div class="score-cols">${posColHtml}${negColHtml}</div>${previewHtml}
         <div style="margin-top:auto;display:flex;flex-direction:column;gap:.4rem">
           ${saveHtml}
           <div style="font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-muted);text-align:center">
@@ -892,15 +916,13 @@ window.onOutChange = function(clickedPi) {
       if (!block) return;
       const isWinner = ei === outEi;
       const d = game.submitted.includes(ei) ? "disabled" : "";
-      block.innerHTML = `<div class="col-section-label">Leftover (−)</div>` + (isWinner
+      block.innerHTML = `<div class="col-section-label">Leftover</div>` + (isWinner
         ? `<div class="neg-gone-out">Went out — no leftover</div>`
-        : `<div class="card-grid-2" id="neg-wrap-${ei}">
-            <div class="neg-cf"><label>Red 3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-            <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-            <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-            <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-            <div class="neg-cf"><label>9–3 and below −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-          </div>`);
+        : `<div class="neg-cf"><label>Red3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+           <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+           <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+           <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+           <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>`);
     });
   }
   game.entities.forEach((_, ei) => {
@@ -948,10 +970,12 @@ window.onEntryInput = function(ei) {
 
 window.commitEntity = async function(ei) {
   if (!game || game.submitted.includes(ei)) return;
+  const outPi = getOutPlayerIdx();
   // Mark saved locally immediately so the UI responds without waiting for Firebase
   game.submitted.push(ei);
   clearTimeout(draftTimers[ei]);
   markEntitySaved(ei);
+  if (outPi >= 0) disableWentOutForOthers(game.players[outPi].entityIdx);
   // Push committed draft — all clients see this via subscribeToDrafts; finalization
   // happens there once every entity is committed.
   await pushDraft(ei, true);
