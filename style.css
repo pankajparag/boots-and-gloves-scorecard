@@ -32,7 +32,7 @@
   .btn-cancel{background:#f0ede6;color:var(--text-muted);border:1px solid var(--border);}
 
   .page{padding:1.5rem 2rem;max-width:1600px;margin:0 auto;}
-  @media(max-width:700px){.page{padding:.75rem;}.setup-panel{padding:.75rem;gap:.75rem;}header{padding:1rem;}}
+  @media(max-width:700px){html{font-size:100%;}.page{padding:.75rem;}.setup-panel{padding:.75rem;gap:.75rem;}header{padding:1rem;}}
 
   .winner-banner{display:none;background:var(--green);color:white;text-align:center;padding:1.5rem;border-radius:var(--radius);font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:1.5rem;}
   .winner-banner.visible{display:block;}
@@ -116,6 +116,8 @@
   .cf label,.neg-cf label{font-size:.72rem;color:var(--text-muted);display:block;margin-bottom:2px;}
   .cf input{width:100%;font-family:'IBM Plex Mono',monospace;font-size:.9rem;border:1px solid var(--border);border-radius:5px;padding:4px 5px;background:var(--bg);color:var(--text);outline:none;}
   .cf input:focus{border-color:var(--gold);background:var(--gold-light);}
+  .pos-block{background:var(--green-light);border:1px solid #b8dfc8;border-radius:7px;padding:.5rem .6rem;}
+  .pos-block .col-section-label{color:var(--green-dark);}
   .neg-block{background:#fff8f7;border:1px solid #f5c6c2;border-radius:7px;padding:.65rem .75rem;}
   .neg-block .col-section-label{color:var(--red-dark);}
   .neg-cf input{width:100%;font-family:'IBM Plex Mono',monospace;font-size:.9rem;border:1px solid #f5c6c2;border-radius:5px;padding:4px 5px;background:#fff3f2;color:var(--red-dark);outline:none;}

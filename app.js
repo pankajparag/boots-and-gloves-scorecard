@@ -693,6 +693,7 @@ window.openEditModal = function(roundIdx) {
     const leftoverInner = isIndWinner
       ? `<div class="modal-went-out-note">Went out — no leftover</div>`
       : `<div class="modal-field neg-field"><label>Red3 −500</label><input type="number" min="0" id="medit-nred3-${ei}" value="${b.nred3}" oninput="updateModalPreview(${ei})"></div>
+         <div class="modal-field" aria-hidden="true" style="visibility:hidden"><label>&nbsp;</label><input type="number" disabled tabindex="-1"></div>
          <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${ei}" value="${b.njoker}" oninput="updateModalPreview(${ei})"></div>
          <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${ei}" value="${b.nwild}" oninput="updateModalPreview(${ei})"></div>
          <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${ei}" value="${b.nface}" oninput="updateModalPreview(${ei})"></div>
@@ -706,11 +707,10 @@ window.openEditModal = function(roundIdx) {
         ${wentOutHtml}
       </div>
       <div class="modal-score-cols">
-        <div class="modal-score-col-pos">
-          <div class="modal-section-label" style="grid-column:unset;border-top:none;padding-top:0;margin-top:0">Books</div>
+        <div class="modal-score-col-pos pos-block">
+          <div class="modal-section-label" style="grid-column:unset;border-top:none;padding-top:0;margin-top:0;color:var(--green-dark)">Scored</div>
           <div class="modal-field red-field"><label>🔴 Red ×500</label><input type="number" min="0" id="medit-rb-${ei}" value="${b.rb}" oninput="updateModalPreview(${ei})"></div>
           <div class="modal-field"><label>⚫ Black ×300</label><input type="number" min="0" id="medit-bb-${ei}" value="${b.bb}" oninput="updateModalPreview(${ei})"></div>
-          <div class="modal-section-label" style="grid-column:unset">Positive</div>
           <div class="modal-field"><label>Joker ×50</label><input type="number" min="0" id="medit-pjoker-${ei}" value="${b.pjoker}" oninput="updateModalPreview(${ei})"></div>
           <div class="modal-field"><label>2/Ace ×20</label><input type="number" min="0" id="medit-pwild-${ei}" value="${b.pwild}" oninput="updateModalPreview(${ei})"></div>
           <div class="modal-field"><label>K–10 ×10</label><input type="number" min="0" id="medit-pface-${ei}" value="${b.pface}" oninput="updateModalPreview(${ei})"></div>
@@ -746,6 +746,7 @@ window.onModalOutChange = function(clickedPi) {
         const div = document.getElementById(`modal-leftover-${currentModalOutEi}`);
         if (div) div.innerHTML = `<div class="modal-section-label" style="grid-column:unset;border-top:none;padding-top:0;margin-top:0;color:var(--red-dark)">Leftover</div>
           <div class="modal-field neg-field"><label>Red3 −500</label><input type="number" min="0" id="medit-nred3-${currentModalOutEi}" value="${b.nred3}" oninput="updateModalPreview(${currentModalOutEi})"></div>
+          <div class="modal-field" aria-hidden="true" style="visibility:hidden"><label>&nbsp;</label><input type="number" disabled tabindex="-1"></div>
           <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${currentModalOutEi}" value="${b.njoker}" oninput="updateModalPreview(${currentModalOutEi})"></div>
           <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${currentModalOutEi}" value="${b.nwild}" oninput="updateModalPreview(${currentModalOutEi})"></div>
           <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${currentModalOutEi}" value="${b.nface}" oninput="updateModalPreview(${currentModalOutEi})"></div>
@@ -857,11 +858,10 @@ function renderEntryColumns() {
       </div>`).join("")}
     </div>`;
 
-    const posColHtml = `<div class="score-col-pos">
-      <div class="col-section-label">Books</div>
+    const posColHtml = `<div class="score-col-pos pos-block">
+      <div class="col-section-label">Scored</div>
       <div class="book-field red"><label>🔴 Red ×500</label><input type="number" min="0" value="0" id="rb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
       <div class="book-field black"><label>⚫ Black ×300</label><input type="number" min="0" value="0" id="bb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-      <div class="col-section-label" style="margin-top:.3rem">Cards scored</div>
       <div class="cf"><label>Joker ×50</label><input type="number" min="0" value="0" id="pjoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
       <div class="cf"><label>2/Ace ×20</label><input type="number" min="0" value="0" id="pwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
       <div class="cf"><label>K–10 ×10</label><input type="number" min="0" value="0" id="pface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
@@ -871,6 +871,7 @@ function renderEntryColumns() {
     const negInner = isIndWinner
       ? `<div class="neg-gone-out">Went out — no leftover</div>`
       : `<div class="neg-cf"><label>Red3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+         <div class="neg-cf" aria-hidden="true" style="visibility:hidden"><label>&nbsp;</label><input type="number" disabled tabindex="-1"></div>
          <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
          <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
          <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
@@ -919,6 +920,7 @@ window.onOutChange = function(clickedPi) {
       block.innerHTML = `<div class="col-section-label">Leftover</div>` + (isWinner
         ? `<div class="neg-gone-out">Went out — no leftover</div>`
         : `<div class="neg-cf"><label>Red3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+           <div class="neg-cf" aria-hidden="true" style="visibility:hidden"><label>&nbsp;</label><input type="number" disabled tabindex="-1"></div>
            <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
            <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
            <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
