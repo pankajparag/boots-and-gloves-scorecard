@@ -16,6 +16,7 @@
     <p>score card</p>
   </div>
   <div class="header-links">
+    <a class="game-link" href="#rules-section" onclick="document.getElementById('rules-section').open=true">Rules</a>
     <span style="font-size:.7rem;color:#888;font-family:'IBM Plex Mono',monospace">Play online →</span>
     <a class="game-link" href="https://playingcards.io/utv8e9" target="_blank" id="link-team2v2">Team 2v2</a>
     <a class="game-link" href="https://playingcards.io/xv2w4e" target="_blank" id="link-team3v3">Team 3v3</a>
@@ -93,6 +94,121 @@
     <div class="entry-round-header" id="round-header">Round 1</div>
     <div class="entry-columns" id="entry-columns"></div>
   </div>
+
+  <details class="rules-section" id="rules-section">
+    <summary class="rules-summary">How to play — Boots &amp; Gloves</summary>
+    <div class="rules-body">
+      <p class="rules-subtitle">Also known as Hand and Foot &nbsp;·&nbsp; Hamanishi rules</p>
+
+      <div class="rules-grid">
+
+        <div class="rules-card">
+          <h3>Setup</h3>
+          <ul>
+            <li><strong>Partners or cutthroat:</strong> Even number of players → partners; odd → cutthroat</li>
+            <li><strong>Decks:</strong> One more than the number of players, jokers included</li>
+            <li><strong>Jokers:</strong> One per deck recommended — more jokers means faster, luckier play</li>
+            <li><strong>Who goes first:</strong> Each player cuts a card; highest card plays first</li>
+          </ul>
+        </div>
+
+        <div class="rules-card">
+          <h3>The Deal</h3>
+          <p>Each player estimates 22 cards and counts them into two stacks of 11. Pass one stack right, one left. Without looking at the two stacks you received, choose which becomes your <strong>glove</strong> (hand) and which becomes your <strong>boot</strong>.</p>
+          <p>Arrange the cards in your glove from high to low. You are collecting sets of 3 or more of a kind.</p>
+        </div>
+
+        <div class="rules-card">
+          <h3>Your Turn</h3>
+          <ol>
+            <li>Draw 2 cards from the stock pile</li>
+            <li>Meld or add to your team's existing melds (if eligible)</li>
+            <li>Discard one card to end your turn</li>
+          </ol>
+          <p>Once at least 7 cards are in the discard pile, you may pick up the top 7 consecutive discards — but only if you can immediately meld the top card of those 7.</p>
+        </div>
+
+        <div class="rules-card">
+          <h3>Melding (Going Down)</h3>
+          <p>Meld sets of 3 or more of the same rank. Jokers and 2s are wild — max <strong>one wild per set</strong>. Once one partner melds, the other can add to those same melds on their turn.</p>
+          <p>Your first meld must meet the minimum for your team's current score:</p>
+          <table class="rules-meld-table">
+            <thead><tr><th>Score</th><th>Min. meld</th></tr></thead>
+            <tbody>
+              <tr><td>&lt; 1,300</td><td>50 pts</td></tr>
+              <tr><td>1,300 – 2,499</td><td>90 pts</td></tr>
+              <tr><td>2,500 – 4,599</td><td>120 pts</td></tr>
+              <tr><td>4,600 – 7,499</td><td>150 pts</td></tr>
+              <tr><td>7,500 – 8,999</td><td>180 pts</td></tr>
+              <tr><td>9,000 – 9,999</td><td>210 pts</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="rules-card">
+          <h3>Books</h3>
+          <p>A stack of 7 or more cards of the same rank is a <strong>book</strong>. Stack them up — the top card's colour shows the type:</p>
+          <ul>
+            <li><span class="rules-red-book">🔴 Red book</span> — no wild cards &nbsp;<strong>+500 pts</strong></li>
+            <li>⚫ Black book — wild cards allowed &nbsp;<strong>+300 pts</strong></li>
+          </ul>
+          <p>You can continue playing on a completed book or start a new stack for the same rank.</p>
+        </div>
+
+        <div class="rules-card">
+          <h3>Your Boot</h3>
+          <p>Once you have played all cards in your glove and discarded, pick up your boot. Announce <em>"going into my boot."</em></p>
+          <p>If you played every card in your glove <em>without discarding</em>, call <em>"Straight"</em> and pick up your boot — but <strong>you cannot go out in the same turn you go straight</strong>.</p>
+        </div>
+
+        <div class="rules-card">
+          <h3>Going Out</h3>
+          <p>To end the round your team needs:</p>
+          <ul>
+            <li>All cards played from both your glove and boot</li>
+            <li>At least <strong>1 red book and 1 black book</strong></li>
+          </ul>
+          <p>You may ask your partner <em>"Can I go out?"</em> — they can only answer yes or no (no hints). You may ignore their answer.</p>
+          <p>Game ends when a team reaches <strong>10,000 pts</strong> (partners) or <strong>6,000 pts</strong> (cutthroat) at the end of any round.</p>
+        </div>
+
+      </div>
+
+      <div class="rules-scoring">
+        <h3>Scoring</h3>
+        <div class="rules-score-cols">
+          <div>
+            <div class="rules-score-heading">Positive (melded cards &amp; books)</div>
+            <table class="rules-score-table">
+              <tbody>
+                <tr><td>🔴 Red book (7+, no wilds)</td><td class="rules-pos-val">+500</td></tr>
+                <tr><td>⚫ Black book (7+, wilds ok)</td><td class="rules-pos-val">+300</td></tr>
+                <tr><td>Going out</td><td class="rules-pos-val">+100</td></tr>
+                <tr><td>Joker</td><td class="rules-pos-val">+50</td></tr>
+                <tr><td>2 or Ace</td><td class="rules-pos-val">+20</td></tr>
+                <tr><td>K, Q, J, 10</td><td class="rules-pos-val">+10</td></tr>
+                <tr><td>9 down to 4</td><td class="rules-pos-val">+5</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div class="rules-score-heading">Negative (cards left in glove or boot)</div>
+            <table class="rules-score-table">
+              <tbody>
+                <tr><td>Red 3</td><td class="rules-neg-val">−500</td></tr>
+                <tr><td>Joker</td><td class="rules-neg-val">−50</td></tr>
+                <tr><td>2 or Ace</td><td class="rules-neg-val">−20</td></tr>
+                <tr><td>K, Q, J, 10</td><td class="rules-neg-val">−10</td></tr>
+                <tr><td>9 down to 3</td><td class="rules-neg-val">−5</td></tr>
+              </tbody>
+            </table>
+            <p class="rules-note">3s cannot be melded. Red 3s are a heavy penalty — avoid leaving them in your glove or boot.</p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </details>
 </div>
 
 <datalist id="preset-names">
@@ -106,6 +222,6 @@
   <option value="Abhishek">
   <option value="Gaurav">
 </datalist>
-<script type="module" src="app.js?v=8"></script>
+<script type="module" src="app.js?v=9"></script>
 </body>
 </html>
