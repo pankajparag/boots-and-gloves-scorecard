@@ -27,6 +27,7 @@ let isFinalizingRound = false;
 let renameTimer = null;
 let draftTimers = {};    // ei → debounce timer for live draft push
 let localEditTime = {};  // ei → timestamp of last local keystroke
+let localOutTime = 0;    // timestamp of last local "who went out" checkbox change
 let currentDrafts = {};  // latest snapshot from drafts/{id} in Firebase
 
 // ── Firebase sync ─────────────────────────────────────────────────────────────
@@ -152,6 +153,17 @@ function applyDraftsToUI(drafts) {
     }
   });
 
+  // Sync "who went out" from remote drafts if the user hasn't touched it locally in the last 2 s
+  let remoteOutPi = -1;
+  let hasDraft = false;
+  Object.keys(drafts).forEach(eiStr => {
+    const d = drafts[eiStr];
+    if (d && d.round === game.round) { hasDraft = true; if (d.outPi >= 0) remoteOutPi = d.outPi; }
+  });
+  if (hasDraft && remoteOutPi !== getOutPlayerIdx() && Date.now() - localOutTime >= 2000) {
+    applyOutPiToUI(remoteOutPi);
+  }
+
   // If any committed draft has a player going out, lock "who went out" for all other entities
   let wentOutEntityIdx = -1;
   Object.keys(drafts).forEach(eiStr => {
@@ -197,6 +209,7 @@ async function finalizeRound(drafts) {
   game.submitted = [];
   game.pending   = {};
   localEditTime  = {};
+  localOutTime   = 0;
   currentDrafts  = {};
 
   try {
@@ -692,12 +705,12 @@ window.openEditModal = function(roundIdx) {
     </div>`).join("");
     const leftoverInner = isIndWinner
       ? `<div class="modal-went-out-note">Went out — no leftover</div>`
-      : `<div class="modal-field neg-field"><label>Red3 −500</label><input type="number" min="0" id="medit-nred3-${ei}" value="${b.nred3}" oninput="updateModalPreview(${ei})"></div>
+      : `<div class="modal-field neg-field"><label>🔴−500</label><input type="number" min="0" id="medit-nred3-${ei}" value="${b.nred3}" oninput="updateModalPreview(${ei})"></div>
          <div class="modal-field" aria-hidden="true" style="visibility:hidden"><label>&nbsp;</label><input type="number" disabled tabindex="-1"></div>
-         <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${ei}" value="${b.njoker}" oninput="updateModalPreview(${ei})"></div>
-         <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${ei}" value="${b.nwild}" oninput="updateModalPreview(${ei})"></div>
-         <div class="modal-field neg-field"><label>K–10 −10</label><input type="number" min="0" id="medit-nface-${ei}" value="${b.nface}" oninput="updateModalPreview(${ei})"></div>
-         <div class="modal-field neg-field"><label>9–3 −5</label><input type="number" min="0" id="medit-nlow-${ei}" value="${b.nlow}" oninput="updateModalPreview(${ei})"></div>`;
+         <div class="modal-field neg-field"><label>−50</label><input type="number" min="0" id="medit-njoker-${ei}" value="${b.njoker}" oninput="updateModalPreview(${ei})"></div>
+         <div class="modal-field neg-field"><label>−20</label><input type="number" min="0" id="medit-nwild-${ei}" value="${b.nwild}" oninput="updateModalPreview(${ei})"></div>
+         <div class="modal-field neg-field"><label>−10</label><input type="number" min="0" id="medit-nface-${ei}" value="${b.nface}" oninput="updateModalPreview(${ei})"></div>
+         <div class="modal-field neg-field"><label>−5</label><input type="number" min="0" id="medit-nlow-${ei}" value="${b.nlow}" oninput="updateModalPreview(${ei})"></div>`;
     const initTotal = calcTotal(b, isIndWinner);
     const initColor = initTotal < 0 ? "var(--red)" : "var(--green-dark)";
     return `<div class="modal-entity">
@@ -709,12 +722,12 @@ window.openEditModal = function(roundIdx) {
       <div class="modal-score-cols">
         <div class="modal-score-col-pos pos-block">
           <div class="modal-section-label" style="grid-column:unset;border-top:none;padding-top:0;margin-top:0;color:var(--green-dark)">Scored</div>
-          <div class="modal-field red-field"><label>🔴 Red ×500</label><input type="number" min="0" id="medit-rb-${ei}" value="${b.rb}" oninput="updateModalPreview(${ei})"></div>
-          <div class="modal-field"><label>⚫ Black ×300</label><input type="number" min="0" id="medit-bb-${ei}" value="${b.bb}" oninput="updateModalPreview(${ei})"></div>
-          <div class="modal-field"><label>Joker ×50</label><input type="number" min="0" id="medit-pjoker-${ei}" value="${b.pjoker}" oninput="updateModalPreview(${ei})"></div>
-          <div class="modal-field"><label>2/Ace ×20</label><input type="number" min="0" id="medit-pwild-${ei}" value="${b.pwild}" oninput="updateModalPreview(${ei})"></div>
-          <div class="modal-field"><label>K–10 ×10</label><input type="number" min="0" id="medit-pface-${ei}" value="${b.pface}" oninput="updateModalPreview(${ei})"></div>
-          <div class="modal-field"><label>9–4 ×5</label><input type="number" min="0" id="medit-plow-${ei}" value="${b.plow}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field red-field"><label>🔴 500</label><input type="number" min="0" id="medit-rb-${ei}" value="${b.rb}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field"><label>⚫ 300</label><input type="number" min="0" id="medit-bb-${ei}" value="${b.bb}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field"><label>50</label><input type="number" min="0" id="medit-pjoker-${ei}" value="${b.pjoker}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field"><label>20</label><input type="number" min="0" id="medit-pwild-${ei}" value="${b.pwild}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field"><label>10</label><input type="number" min="0" id="medit-pface-${ei}" value="${b.pface}" oninput="updateModalPreview(${ei})"></div>
+          <div class="modal-field"><label>5</label><input type="number" min="0" id="medit-plow-${ei}" value="${b.plow}" oninput="updateModalPreview(${ei})"></div>
         </div>
         <div class="modal-score-col-neg" id="modal-leftover-${ei}">
           <div class="modal-section-label" style="grid-column:unset;border-top:none;padding-top:0;margin-top:0;color:var(--red-dark)">Leftover</div>
@@ -745,7 +758,7 @@ window.onModalOutChange = function(clickedPi) {
         const b = game.rounds[editingRoundIdx].breakdowns[currentModalOutEi];
         const div = document.getElementById(`modal-leftover-${currentModalOutEi}`);
         if (div) div.innerHTML = `<div class="modal-section-label" style="grid-column:unset;border-top:none;padding-top:0;margin-top:0;color:var(--red-dark)">Leftover</div>
-          <div class="modal-field neg-field"><label>Red3 −500</label><input type="number" min="0" id="medit-nred3-${currentModalOutEi}" value="${b.nred3}" oninput="updateModalPreview(${currentModalOutEi})"></div>
+          <div class="modal-field neg-field"><label>🔴 −500</label><input type="number" min="0" id="medit-nred3-${currentModalOutEi}" value="${b.nred3}" oninput="updateModalPreview(${currentModalOutEi})"></div>
           <div class="modal-field" aria-hidden="true" style="visibility:hidden"><label>&nbsp;</label><input type="number" disabled tabindex="-1"></div>
           <div class="modal-field neg-field"><label>Joker −50</label><input type="number" min="0" id="medit-njoker-${currentModalOutEi}" value="${b.njoker}" oninput="updateModalPreview(${currentModalOutEi})"></div>
           <div class="modal-field neg-field"><label>2/Ace −20</label><input type="number" min="0" id="medit-nwild-${currentModalOutEi}" value="${b.nwild}" oninput="updateModalPreview(${currentModalOutEi})"></div>
@@ -860,22 +873,22 @@ function renderEntryColumns() {
 
     const posColHtml = `<div class="score-col-pos pos-block">
       <div class="col-section-label">Scored</div>
-      <div class="book-field red"><label>🔴 Red ×500</label><input type="number" min="0" value="0" id="rb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-      <div class="book-field black"><label>⚫ Black ×300</label><input type="number" min="0" value="0" id="bb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-      <div class="cf"><label>Joker ×50</label><input type="number" min="0" value="0" id="pjoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-      <div class="cf"><label>2/Ace ×20</label><input type="number" min="0" value="0" id="pwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-      <div class="cf"><label>K–10 ×10</label><input type="number" min="0" value="0" id="pface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-      <div class="cf"><label>9–4 ×5</label><input type="number" min="0" value="0" id="plow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="book-field red"><label>🔴 500</label><input type="number" min="0" value="0" id="rb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="book-field black"><label>⚫ 300</label><input type="number" min="0" value="0" id="bb-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="cf"><label>50</label><input type="number" min="0" value="0" id="pjoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="cf"><label>20</label><input type="number" min="0" value="0" id="pwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="cf"><label>10</label><input type="number" min="0" value="0" id="pface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      <div class="cf"><label>5</label><input type="number" min="0" value="0" id="plow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
     </div>`;
 
     const negInner = isIndWinner
       ? `<div class="neg-gone-out">Went out — no leftover</div>`
-      : `<div class="neg-cf"><label>Red3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+      : `<div class="neg-cf"><label>🔴 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
          <div class="neg-cf" aria-hidden="true" style="visibility:hidden"><label>&nbsp;</label><input type="number" disabled tabindex="-1"></div>
-         <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-         <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-         <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-         <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>`;
+         <div class="neg-cf"><label>−50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+         <div class="neg-cf"><label>−20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+         <div class="neg-cf"><label>−10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+         <div class="neg-cf"><label>−5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>`;
     const negColHtml = `<div class="score-col-neg neg-block" id="neg-block-${ei}">
       <div class="col-section-label">Leftover</div>
       ${negInner}
@@ -905,12 +918,12 @@ function renderEntryColumns() {
   }).join("");
 }
 
-window.onOutChange = function(clickedPi) {
+function applyOutPiToUI(outPi) {
   game.players.forEach((_, pi) => {
-    if (pi !== clickedPi) { const el = document.getElementById(`out-${pi}`); if (el) el.checked = false; }
+    const el = document.getElementById(`out-${pi}`);
+    if (el && !el.disabled) el.checked = (pi === outPi);
   });
-  const outPi = getOutPlayerIdx();
-  const outEi = outPi >= 0 ? game.players[outPi].entityIdx : -1;
+  const outEi = outPi >= 0 ? (game.players[outPi]?.entityIdx ?? -1) : -1;
   if (!game.isTeam) {
     game.entities.forEach((_, ei) => {
       const block = document.getElementById(`neg-block-${ei}`);
@@ -919,16 +932,24 @@ window.onOutChange = function(clickedPi) {
       const d = game.submitted.includes(ei) ? "disabled" : "";
       block.innerHTML = `<div class="col-section-label">Leftover</div>` + (isWinner
         ? `<div class="neg-gone-out">Went out — no leftover</div>`
-        : `<div class="neg-cf"><label>Red3 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+        : `<div class="neg-cf"><label>🔴 −500</label><input type="number" min="0" value="0" id="nred3-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
            <div class="neg-cf" aria-hidden="true" style="visibility:hidden"><label>&nbsp;</label><input type="number" disabled tabindex="-1"></div>
-           <div class="neg-cf"><label>Joker −50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-           <div class="neg-cf"><label>2/Ace −20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-           <div class="neg-cf"><label>K–10 −10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
-           <div class="neg-cf"><label>9–3 −5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>`);
+           <div class="neg-cf"><label>−50</label><input type="number" min="0" value="0" id="njoker-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+           <div class="neg-cf"><label>−20</label><input type="number" min="0" value="0" id="nwild-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+           <div class="neg-cf"><label>−10</label><input type="number" min="0" value="0" id="nface-${ei}" ${d} oninput="onEntryInput(${ei})"></div>
+           <div class="neg-cf"><label>−5</label><input type="number" min="0" value="0" id="nlow-${ei}" ${d} oninput="onEntryInput(${ei})"></div>`);
     });
   }
+  game.entities.forEach((_, ei) => updateColPreview(ei));
+}
+
+window.onOutChange = function(clickedPi) {
+  game.players.forEach((_, pi) => {
+    if (pi !== clickedPi) { const el = document.getElementById(`out-${pi}`); if (el) el.checked = false; }
+  });
+  localOutTime = Date.now();
+  applyOutPiToUI(getOutPlayerIdx());
   game.entities.forEach((_, ei) => {
-    updateColPreview(ei);
     if (!game.submitted.includes(ei)) scheduleDraftPush(ei);
   });
 };
