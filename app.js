@@ -300,7 +300,7 @@ function getTotals() {
   for (const r of game.rounds) r.breakdowns.forEach((b, i) => t[i] += b.total);
   return t;
 }
-function gridStyle(n) { return `grid-template-columns:72px repeat(${n},1fr)`; }
+function gridStyle(n) { return `grid-template-columns:96px repeat(${n},1fr)`; }
 function getOutPlayerIdx() {
   for (let i = 0; i < game.players.length; i++) if (chk(`out-${i}`)) return i;
   return -1;
@@ -742,7 +742,7 @@ window.openEditModal = function(roundIdx) {
   editingRoundIdx = roundIdx;
   const r = game.rounds[roundIdx];
   document.getElementById("modal-title").textContent = `Edit Round ${r.round}`;
-  document.getElementById("modal-fields").style.gridTemplateColumns = `repeat(${Math.min(game.entities.length, 2)}, 1fr)`;
+  document.getElementById("modal-fields").style.gridTemplateColumns = `repeat(${Math.min(game.entities.length, 2)}, minmax(0, 1fr))`;
   currentModalOutEi = !game.isTeam && r.outPlayerIdx >= 0 ? game.players[r.outPlayerIdx].entityIdx : -1;
 
   document.getElementById("modal-fields").innerHTML = game.entities.map((e, ei) => {
@@ -891,7 +891,7 @@ function renderEntryColumns() {
   const { entities, players, round, isTeam, submitted } = game;
   document.getElementById("round-header").textContent = `Round ${round}`;
   const cols = document.getElementById("entry-columns");
-  cols.style.gridTemplateColumns = `repeat(${entities.length}, 1fr)`;
+  cols.style.gridTemplateColumns = `repeat(${entities.length}, minmax(0, 1fr))`;
   const outPi  = getOutPlayerIdx();
   const outEi  = outPi >= 0 ? players[outPi].entityIdx : -1;
   const totals = getTotals();
