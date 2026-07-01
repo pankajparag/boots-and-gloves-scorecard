@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { startFreshGame } from "./helpers.js";
+import { startFreshGame, testCode } from "./helpers.js";
 
 test.describe("page load", () => {
   test("header and game mode selector are visible", async ({ page }) => {
@@ -69,6 +69,33 @@ test.describe("score entry", () => {
   });
 });
 
+test.describe("navigation highlight", () => {
+  test("active nav link matches the restored game's mode after a reload, not a stale default", async ({ page }) => {
+    // Regression test: on page load the header used to hardcode the "Team 2v2"
+    // nav link as active before the saved game was restored from Firebase, and
+    // never corrected it once the real mode was known — so reloading into an
+    // ind3 (individual) game still showed "Team 2v2" highlighted in the header
+    // while the scoreboard below was for individual players.
+    page.on("dialog", dialog => dialog.accept());
+    await page.goto("/");
+    await page.waitForSelector("#game-mode");
+    await page.selectOption("#game-mode", "custom");
+    await page.waitForSelector("#custom-game-row", { state: "visible" });
+    await page.selectOption("#custom-mode", "ind3");
+    await page.fill("#custom-game-id", testCode());
+    await page.click("button:has-text('Start / Reset game')");
+    await page.waitForSelector(".entity-col", { timeout: 15_000 });
+
+    // Reload so the game is restored from Firebase via the auto-restore path,
+    // not freshly started via onModeChange (which already highlighted correctly).
+    await page.reload();
+    await page.waitForSelector(".entity-col", { timeout: 15_000 });
+
+    await expect(page.locator("#link-ind3")).toHaveClass(/active/);
+    await expect(page.locator("#link-team2v2")).not.toHaveClass(/active/);
+  });
+});
+
 test.describe("keyboard navigation", () => {
   test("Enter key advances through fields within a column, same as Tab", async ({ page }) => {
     await startFreshGame(page);
@@ -111,6 +138,7 @@ test.describe("keyboard navigation", () => {
     // live in the background — the modal overlays them without removing them.
     await page.fill("#rb-0", "1");
     await page.click("#col-0 .btn-success");
+    await page.check("#out-2");
     await page.fill("#bb-1", "1");
     await page.click("#col-1 .btn-success");
     await expect(page.locator("#round-header")).toHaveText("Round 2", { timeout: 15_000 });

@@ -4,7 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import {
   getBrackets, getMeld, isTeamMode, calcTotal, checkWinner, buildGame,
-  canFinalize, computeFinalOutPi, buildBreakdownsFromDrafts
+  canFinalize, allCommitted, hasExactlyOneWentOut, computeFinalOutPi, buildBreakdownsFromDrafts
 } from "./game-logic.js";
 
 // ── Firebase paths ────────────────────────────────────────────────────────────
@@ -115,6 +115,7 @@ function subscribeToDrafts(gameId) {
     const entryArea = document.getElementById("entry-area");
     if (entryArea && entryArea.style.display !== "none") applyDraftsToUI(currentDrafts);
     renderScoreboard();
+    updateFinalizeWarning(currentDrafts);
     if (shouldFinalize(currentDrafts) && !isFinalizingRound) {
       isFinalizingRound = true;
       finalizeRound(currentDrafts).catch(e => { console.error(e); isFinalizingRound = false; });
@@ -212,15 +213,26 @@ function markEntitySaved(ei) {
   const btn = col.querySelector(".btn-success");
   if (btn) { btn.className = "btn btn-saved"; btn.disabled = true; btn.textContent = `✓ Saved — ${game.entities[ei].name}`; }
   DRAFT_FIELDS.forEach(f => { const inp = document.getElementById(`${f}-${ei}`); if (inp) inp.disabled = true; });
-  game.players.forEach((p, pi) => {
-    if (p.entityIdx === ei) { const el = document.getElementById(`out-${pi}`); if (el) el.disabled = true; }
-  });
+  // "Went out" checkboxes stay enabled after save (unless disableWentOutForOthers
+  // locks them once a winner is confirmed) — otherwise an entity saved before
+  // anyone is marked as going out would freeze its draft's outPi at -1 forever,
+  // deadlocking canFinalize's hasExactlyOneWentOut check.
   updateColPreview(ei);
 }
 
 function shouldFinalize(drafts) {
   if (!game) return false;
   return canFinalize(drafts, game.round, game.entities.length);
+}
+
+// Surfaces a banner once every entity has saved but no single player is
+// recorded as having gone out yet, so the round doesn't stall silently.
+function updateFinalizeWarning(drafts) {
+  const el = document.getElementById("finalize-warning");
+  if (!el || !game) return;
+  const stuck = allCommitted(drafts, game.round, game.entities.length)
+    && !hasExactlyOneWentOut(drafts, game.entities.length);
+  el.style.display = stuck ? "" : "none";
 }
 
 async function finalizeRound(drafts) {
@@ -913,10 +925,11 @@ function renderEntryColumns() {
       ? `<div class="dealer-badge">🃏 Dealing: ${esc(dealer.playerName)}</div>`
       : "";
 
+    // Stays enabled even once this entity is saved — see markEntitySaved for why.
     const wentOutHtml = `<div class="went-out-section">
       <div class="col-section-label" style="color:var(--green-dark)">Who went out?</div>
       ${myPlayers.map(p => `<div class="win-row-check">
-        <input type="checkbox" id="out-${p.pi}" onchange="onOutChange(${p.pi})" ${isSaved ? "disabled" : ""}>
+        <input type="checkbox" id="out-${p.pi}" onchange="onOutChange(${p.pi})">
         <label for="out-${p.pi}">${esc(p.name)}</label>
       </div>`).join("")}
     </div>`;
@@ -1000,7 +1013,11 @@ window.onOutChange = function(clickedPi) {
   localOutTime = Date.now();
   applyOutPiToUI(getOutPlayerIdx());
   game.entities.forEach((_, ei) => {
-    if (!game.submitted.includes(ei)) scheduleDraftPush(ei);
+    // Already-committed entities must still get the new outPi immediately
+    // (preserving their committed:true), or their draft stays stuck at a
+    // stale value and hasExactlyOneWentOut can never agree.
+    if (game.submitted.includes(ei)) pushDraft(ei, true);
+    else scheduleDraftPush(ei);
   });
 };
 
@@ -1084,6 +1101,7 @@ highlightActiveLink("team2v2");
     const data = snapshot.val();
     game = { ...data, rounds: toArray(data.rounds), entities: toArray(data.entities), players: toArray(data.players), submitted: [], pending: {} };
     updateGameCodeDisplay();
+    highlightActiveLink(game.mode);
     subscribeToFirebase(savedId);
     const totals = getTotals();
     const winner = checkWinner(totals, game.target);

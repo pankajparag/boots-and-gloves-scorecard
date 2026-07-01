@@ -136,6 +136,9 @@ test.describe("round finalization", () => {
     await expect(draftValsB.nth(0)).toContainText("500");
     await expect(draftValsB.nth(1)).toContainText("—");
 
+    // Device B marks a Team 2 player as having gone out — a round only
+    // finalizes once exactly one player is recorded as going out.
+    await pageB.check("#out-2");
     // Device B saves Team 2 with 1 black book
     await pageB.fill("#bb-1", "1");
     await pageB.click("#col-1 .btn-success");
@@ -148,10 +151,10 @@ test.describe("round finalization", () => {
     await expect(pageA.locator(".round-label").first()).toContainText("Round 1");
     await expect(pageB.locator(".round-label").first()).toContainText("Round 1");
 
-    // Scores should be correct: Team 1 = +500, Team 2 = +300
+    // Scores should be correct: Team 1 = +500, Team 2 = +300 black book + 100 win
     const scoresA = pageA.locator(".score-val").filter({ hasNotText: "Total" });
     await expect(scoresA.nth(0)).toContainText("500");
-    await expect(scoresA.nth(1)).toContainText("300");
+    await expect(scoresA.nth(1)).toContainText("400");
 
     await ctxA.close();
     await ctxB.close();
@@ -172,6 +175,12 @@ test.describe("round finalization", () => {
 
     // Small pause to ensure B's save is in Firebase before A saves
     await pageA.waitForTimeout(1_000);
+
+    // Device A marks a player as having gone out. This must propagate to
+    // Team 2's already-committed (but winnerless) draft too, or the round
+    // would never finalize — regression coverage for a deadlock where an
+    // entity saved before anyone was marked as going out froze at outPi:-1.
+    await pageA.check("#out-0");
 
     // Device A saves second — this should trigger finalization
     await pageA.fill("#rb-0", "2");

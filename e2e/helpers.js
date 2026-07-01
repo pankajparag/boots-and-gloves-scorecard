@@ -9,7 +9,7 @@ import { test } from "@playwright/test";
 // after the hyphen actually varies per test, and #custom-game-id has
 // maxlength=20, so use that segment directly rather than a prefix + slice
 // (which silently truncated down to the non-unique shared part).
-function testCode() {
+export function testCode() {
   const id = test.info().testId;
   return id.slice(id.lastIndexOf("-") + 1).replace(/[^a-z0-9]/gi, "").toLowerCase();
 }

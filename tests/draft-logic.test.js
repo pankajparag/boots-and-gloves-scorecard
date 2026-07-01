@@ -1,12 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   canFinalize,
+  allCommitted,
+  hasExactlyOneWentOut,
   computeFinalOutPi,
   buildBreakdownsFromDrafts,
 } from "../game-logic.js";
 
-// ── canFinalize ───────────────────────────────────────────────────────────────
-describe("canFinalize", () => {
+// ── allCommitted ──────────────────────────────────────────────────────────────
+describe("allCommitted", () => {
   const round = 3;
 
   it("returns true when all entities committed for the current round", () => {
@@ -14,7 +16,7 @@ describe("canFinalize", () => {
       0: { committed: true, round: 3 },
       1: { committed: true, round: 3 },
     };
-    expect(canFinalize(drafts, round, 2)).toBe(true);
+    expect(allCommitted(drafts, round, 2)).toBe(true);
   });
 
   it("returns false when one entity is not yet committed", () => {
@@ -22,20 +24,108 @@ describe("canFinalize", () => {
       0: { committed: true,  round: 3 },
       1: { committed: false, round: 3 },
     };
-    expect(canFinalize(drafts, round, 2)).toBe(false);
+    expect(allCommitted(drafts, round, 2)).toBe(false);
   });
 
   it("returns false when one entity draft is missing entirely", () => {
     const drafts = {
       0: { committed: true, round: 3 },
     };
-    expect(canFinalize(drafts, round, 2)).toBe(false);
+    expect(allCommitted(drafts, round, 2)).toBe(false);
   });
 
   it("returns false when a draft belongs to a different round (stale)", () => {
     const drafts = {
       0: { committed: true, round: 2 },  // stale
       1: { committed: true, round: 3 },
+    };
+    expect(allCommitted(drafts, round, 2)).toBe(false);
+  });
+
+  it("returns false for empty drafts", () => {
+    expect(allCommitted({}, round, 2)).toBe(false);
+  });
+
+  it("works for 3-entity game (team3v3 or ind3)", () => {
+    const drafts = {
+      0: { committed: true, round: 1 },
+      1: { committed: true, round: 1 },
+      2: { committed: true, round: 1 },
+    };
+    expect(allCommitted(drafts, 1, 3)).toBe(true);
+  });
+});
+
+// ── hasExactlyOneWentOut ───────────────────────────────────────────────────────
+describe("hasExactlyOneWentOut", () => {
+  it("returns false when nobody is recorded as going out", () => {
+    const drafts = { 0: { outPi: -1 }, 1: { outPi: -1 } };
+    expect(hasExactlyOneWentOut(drafts, 2)).toBe(false);
+  });
+
+  it("returns true when every entity agrees on the same player", () => {
+    const drafts = { 0: { outPi: 0 }, 1: { outPi: 0 } };
+    expect(hasExactlyOneWentOut(drafts, 2)).toBe(true);
+  });
+
+  it("returns false when entities disagree on who went out", () => {
+    const drafts = { 0: { outPi: 0 }, 1: { outPi: 2 } };
+    expect(hasExactlyOneWentOut(drafts, 2)).toBe(false);
+  });
+
+  it("treats a missing draft as outPi = -1", () => {
+    const drafts = { 0: { outPi: 0 } };
+    expect(hasExactlyOneWentOut(drafts, 2)).toBe(false);
+  });
+});
+
+// ── canFinalize ───────────────────────────────────────────────────────────────
+describe("canFinalize", () => {
+  const round = 3;
+
+  it("returns true when all entities committed and exactly one player went out", () => {
+    const drafts = {
+      0: { committed: true, round: 3, outPi: 0 },
+      1: { committed: true, round: 3, outPi: 0 },
+    };
+    expect(canFinalize(drafts, round, 2)).toBe(true);
+  });
+
+  it("returns false when all committed but nobody went out", () => {
+    const drafts = {
+      0: { committed: true, round: 3, outPi: -1 },
+      1: { committed: true, round: 3, outPi: -1 },
+    };
+    expect(canFinalize(drafts, round, 2)).toBe(false);
+  });
+
+  it("returns false when all committed but entities disagree on who went out", () => {
+    const drafts = {
+      0: { committed: true, round: 3, outPi: 0 },
+      1: { committed: true, round: 3, outPi: 1 },
+    };
+    expect(canFinalize(drafts, round, 2)).toBe(false);
+  });
+
+  it("returns false when one entity is not yet committed", () => {
+    const drafts = {
+      0: { committed: true,  round: 3, outPi: 0 },
+      1: { committed: false, round: 3, outPi: 0 },
+    };
+    expect(canFinalize(drafts, round, 2)).toBe(false);
+  });
+
+  it("returns false when one entity draft is missing entirely", () => {
+    const drafts = {
+      0: { committed: true, round: 3, outPi: 0 },
+    };
+    expect(canFinalize(drafts, round, 2)).toBe(false);
+  });
+
+  it("returns false when a draft belongs to a different round (stale)", () => {
+    const drafts = {
+      0: { committed: true, round: 2, outPi: 0 },  // stale
+      1: { committed: true, round: 3, outPi: 0 },
     };
     expect(canFinalize(drafts, round, 2)).toBe(false);
   });
@@ -46,9 +136,9 @@ describe("canFinalize", () => {
 
   it("works for 3-entity game (team3v3 or ind3)", () => {
     const drafts = {
-      0: { committed: true, round: 1 },
-      1: { committed: true, round: 1 },
-      2: { committed: true, round: 1 },
+      0: { committed: true, round: 1, outPi: 2 },
+      1: { committed: true, round: 1, outPi: 2 },
+      2: { committed: true, round: 1, outPi: 2 },
     };
     expect(canFinalize(drafts, 1, 3)).toBe(true);
   });

@@ -63,7 +63,7 @@ All connected clients subscribe to both paths via `onValue()`. The `isRemoteUpda
 1. Each entity column has its own Save button (`commitEntity(ei)`).
 2. As scores are typed, `scheduleDraftPush(ei)` debounces a write to `drafts/.../ei` so all devices see live values.
 3. Clicking Save pushes a `committed: true` draft and marks the column disabled locally; other devices see the column lock immediately.
-4. When all entity drafts are `committed`, any client that detects this calls `finalizeRound()`: breakdowns are built from draft data, `game.rounds` gets a new entry, `game.round` increments, drafts are cleared, and the main game state is pushed.
+4. When all entity drafts are `committed` **and** every draft agrees on the same non-negative `outPi` (exactly one player recorded as going out — see `hasExactlyOneWentOut` in `game-logic.js`), any client that detects this calls `finalizeRound()`: breakdowns are built from draft data, `game.rounds` gets a new entry, `game.round` increments, drafts are cleared, and the main game state is pushed. Checking "who went out" pushes the selection to every entity's draft immediately, including already-committed ones, so an entity saved before a winner is picked doesn't freeze at a stale `outPi`.
 5. Editing a past round opens a modal (`openEditModal`), which on save overwrites that round's `breakdowns` in place and re-pushes.
 
 **Firebase rules requirement:**

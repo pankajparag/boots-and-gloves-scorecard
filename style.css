@@ -90,6 +90,7 @@
   .meld-table tr.active-row td{background:var(--gold-light);font-weight:500;color:var(--gold-dark);}
 
   .entry-round-header{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--text);margin-bottom:1rem;padding-bottom:.5rem;border-bottom:2px solid var(--border);}
+  .finalize-warning{font-family:'IBM Plex Mono',monospace;font-size:.85rem;color:var(--red-dark);background:var(--red-light);border:1px solid #f5c6c2;border-radius:6px;padding:.6rem .8rem;margin-bottom:1rem;}
   .entry-columns{display:grid;gap:1rem;grid-template-columns:repeat(var(--entity-count,1), minmax(0, 1fr));}
   @media(max-width:700px){.entry-columns,.modal-entity-cols{grid-template-columns:1fr;}}
   .entity-col{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;display:flex;flex-direction:column;}

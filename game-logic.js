@@ -46,12 +46,28 @@ export function checkWinner(totals, target) {
 // ── draft / round-finalization helpers (pure, no Firebase/DOM) ────────────────
 
 // Returns true when every entity slot in `drafts` is committed for `currentRound`.
-export function canFinalize(drafts, currentRound, entityCount) {
+export function allCommitted(drafts, currentRound, entityCount) {
   for (let ei = 0; ei < entityCount; ei++) {
     const d = drafts[ei];
     if (!d || d.committed !== true || d.round !== currentRound) return false;
   }
   return true;
+}
+
+// Returns true when exactly one player is recorded as having gone out —
+// every entity draft must agree on the same non-negative outPi.
+export function hasExactlyOneWentOut(drafts, entityCount) {
+  const outPis = new Set();
+  for (let ei = 0; ei < entityCount; ei++) outPis.add(drafts[ei]?.outPi ?? -1);
+  return outPis.size === 1 && !outPis.has(-1);
+}
+
+// Round can only finalize once all entities are committed AND exactly one
+// player has been recorded as going out (a round always ends by someone
+// going out — see "Going Out" in the rules).
+export function canFinalize(drafts, currentRound, entityCount) {
+  return allCommitted(drafts, currentRound, entityCount)
+    && hasExactlyOneWentOut(drafts, entityCount);
 }
 
 // Finds the outPi (player index) across all entity drafts; -1 if nobody went out.
