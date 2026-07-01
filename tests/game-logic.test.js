@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   MELD_IND, MELD_TEAM,
-  getBrackets, getMeld,
+  getBrackets, getMeld, getBracketIndex,
   isTeamMode, calcTotal,
   checkWinner, buildGame
 } from "../game-logic.js";
@@ -58,6 +58,17 @@ describe("getMeld — team", () => {
   it("9999    → 210", () => expect(getMeld(9999,  true)).toBe(210));
   it("10000   → null (win)", () => expect(getMeld(10000, true)).toBeNull());
   it("15000   → null (win)", () => expect(getMeld(15000, true)).toBeNull());
+});
+
+// ── getBracketIndex ───────────────────────────────────────────────────────────
+describe("getBracketIndex", () => {
+  it("returns 0 for the lowest individual bracket", () => expect(getBracketIndex(0, false)).toBe(0));
+  it("returns the matching middle bracket", () => expect(getBracketIndex(2500, false)).toBe(2));
+  it("returns the win bracket index for a winning score", () => expect(getBracketIndex(6000, false)).toBe(MELD_IND.length - 1));
+  it("two different scores in the same bracket give the same index", () => {
+    expect(getBracketIndex(1000, false)).toBe(getBracketIndex(1999, false));
+  });
+  it("works for team brackets too", () => expect(getBracketIndex(2500, true)).toBe(2));
 });
 
 // ── calcTotal ─────────────────────────────────────────────────────────────────

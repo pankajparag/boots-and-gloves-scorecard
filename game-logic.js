@@ -25,6 +25,13 @@ export function getMeld(score, isTeam) {
   return 210;
 }
 
+// Index into getBrackets(isTeam) of the bracket a given score currently falls in.
+export function getBracketIndex(score, isTeam) {
+  const brackets = getBrackets(isTeam);
+  for (let i = 0; i < brackets.length; i++) if (score >= brackets[i].min && score < brackets[i].max) return i;
+  return brackets.length - 1;
+}
+
 export function isTeamMode(m) { return m === "team2v2" || m === "team3v3"; }
 
 // nlow covers 9–3 (including black 3, which is the same −5 value)

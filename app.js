@@ -3,7 +3,7 @@ import {
   ref, set, onValue, get
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import {
-  getBrackets, getMeld, isTeamMode, calcTotal, checkWinner, buildGame,
+  getBrackets, getMeld, getBracketIndex, isTeamMode, calcTotal, checkWinner, buildGame,
   canFinalize, allCommitted, hasExactlyOneWentOut, computeFinalOutPi, buildBreakdownsFromDrafts
 } from "./game-logic.js";
 
@@ -298,6 +298,12 @@ function updateGameCodeDisplay() {
 // ── helpers ───────────────────────────────────────────────────────────────────
 function esc(s) {
   return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+// Small colored dot identifying an entity — reused on the scoreboard header,
+// entry column headers, and the meld table so the same color always means
+// the same entity across the page.
+function entityDotHtml(ei, name) {
+  return `<span class="entity-dot entity-dot-${ei}" title="${esc(name)}"></span>`;
 }
 function toArray(v) {
   if (v == null) return [];
@@ -672,11 +678,11 @@ function renderScoreboard() {
   const { entities, rounds, isTeam } = game;
   const n = entities.length;
 
-  const headerCells = entities.map(e => {
+  const headerCells = entities.map((e, ei) => {
     const playerHtml = e.players
       ? `<br><span class="entity-player-names">${e.players.map(esc).join(' / ')}</span>`
       : "";
-    return `<div style="text-align:right"><span class="entity-display-name">${esc(e.name)}</span>${playerHtml}</div>`;
+    return `<div style="text-align:right">${entityDotHtml(ei, e.name)} <span class="entity-display-name">${esc(e.name)}</span>${playerHtml}</div>`;
   }).join("");
 
   let html = `<div class="scoreboard-header" style="${gridStyle(n)}">
@@ -734,14 +740,17 @@ function renderDraftRow(entities, isTeam) {
 }
 
 function renderMeldTable() {
-  const { isTeam } = game;
-  const maxScore = Math.max(...getTotals(), 0);
+  const { isTeam, entities } = game;
+  // Each entity's own current bracket, keyed by bracket index, so a row shows
+  // a colored dot per entity currently sitting in it (not just whoever leads).
+  const entityBracket = getTotals().map(t => getBracketIndex(t, isTeam));
   let html = `<div class="meld-table-title">Meld thresholds — ${isTeam ? "team" : "individual"} game</div>
   <table class="meld-table"><thead><tr><th>Score range</th><th>Min. meld</th></tr></thead><tbody>`;
-  for (const b of getBrackets(isTeam)) {
-    const active = maxScore >= b.min && maxScore < b.max;
-    html += `<tr class="${active ? "active-row" : ""}"><td>${b.label}</td><td>${b.win ? "🏆 Win!" : b.meld + " pts"}</td></tr>`;
-  }
+  getBrackets(isTeam).forEach((b, bi) => {
+    const here = entities.map((_, ei) => ei).filter(ei => entityBracket[ei] === bi);
+    const dots = here.length ? `<span class="entity-dots">${here.map(ei => entityDotHtml(ei, entities[ei].name)).join("")}</span>` : "";
+    html += `<tr class="${here.length ? "active-row" : ""}"><td>${b.label}${dots}</td><td>${b.win ? "🏆 Win!" : b.meld + " pts"}</td></tr>`;
+  });
   html += `</tbody></table>`;
   document.getElementById("meld-table-wrap").innerHTML = html;
 }
@@ -964,7 +973,7 @@ function renderEntryColumns() {
 
     return `<div class="entity-col ${isSaved ? "col-saved" : ""}" id="col-${ei}">
       <div class="entity-col-header ${isDealer ? "header-dealer" : ""}">
-        <div class="col-name">${esc(e.name)}</div>
+        <div class="col-name-row">${entityDotHtml(ei, e.name)}<div class="col-name">${esc(e.name)}</div></div>
         ${teamPlayersHtml}
         ${dealerHtml}
       </div>

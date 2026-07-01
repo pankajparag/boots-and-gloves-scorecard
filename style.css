@@ -3,6 +3,7 @@
     --black:#1a1a2e; --black-light:#eaeaf2; --black-dark:#0d0d1a;
     --gold:#d4a017; --gold-light:#fdf6e3; --gold-dark:#9a7410;
     --green:#1a6b3a; --green-light:#e8f5ee; --green-dark:#0f3d21;
+    --entity-0:#2f6fed; --entity-1:#8e44ad; --entity-2:#12897a;
     --bg:#f7f5f0; --surface:#ffffff; --border:#e0ddd5;
     --text:#1a1a2e; --text-muted:#46465c; --text-light:#6b6b80;
     --radius:10px;
@@ -81,13 +82,18 @@
   .modal-preview{background:var(--gold-light);border:1px solid #e8cc7a;border-radius:5px;padding:.35rem .6rem;font-family:'IBM Plex Mono',monospace;font-size:.87rem;text-align:center;color:var(--text-muted);}
   .modal-actions{display:flex;gap:.5rem;margin-top:1.25rem;justify-content:flex-end;}
 
-  .meld-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  .meld-table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:1.5rem;}
   .meld-table-title{background:var(--black);color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:.78rem;padding:.5rem 1rem;letter-spacing:.05em;text-transform:uppercase;}
   .meld-table{width:100%;border-collapse:collapse;font-family:'IBM Plex Mono',monospace;font-size:.85rem;}
   .meld-table th{background:#f0ede6;color:var(--text-muted);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;padding:6px 10px;text-align:left;border-bottom:1px solid var(--border);}
   .meld-table td{padding:6px 10px;border-bottom:1px solid var(--border);}
   .meld-table tr:last-child td{border-bottom:none;}
   .meld-table tr.active-row td{background:var(--gold-light);font-weight:500;color:var(--gold-dark);}
+  .entity-dots{display:inline-flex;gap:4px;margin-left:8px;vertical-align:middle;}
+  .entity-dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .entity-dot-0{background:var(--entity-0);}
+  .entity-dot-1{background:var(--entity-1);}
+  .entity-dot-2{background:var(--entity-2);}
 
   .entry-round-header{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--text);margin-bottom:1rem;padding-bottom:.5rem;border-bottom:2px solid var(--border);}
   .finalize-warning{font-family:'IBM Plex Mono',monospace;font-size:.85rem;color:var(--red-dark);background:var(--red-light);border:1px solid #f5c6c2;border-radius:6px;padding:.6rem .8rem;margin-bottom:1rem;}
@@ -97,6 +103,7 @@
   .entity-col.col-saved{opacity:.7;}
   .entity-col-header{background:var(--black);color:white;padding:.6rem 1rem;}
   .entity-col-header.header-dealer{border-bottom:2px solid var(--gold);}
+  .entity-col-header .col-name-row{display:flex;align-items:center;gap:6px;}
   .entity-col-header .col-name{font-family:'Playfair Display',serif;font-size:1rem;}
   .entity-col-header .col-players{font-size:.75rem;color:#ccc;margin-top:2px;}
   .dealer-badge{display:inline-block;margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:.7rem;font-weight:500;background:var(--gold);color:var(--black);border-radius:4px;padding:2px 8px;letter-spacing:.03em;}
