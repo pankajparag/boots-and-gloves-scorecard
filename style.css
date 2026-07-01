@@ -45,6 +45,10 @@
   .score-row.totals-row{background:var(--gold-light);font-family:'IBM Plex Mono',monospace;font-weight:500;border-top:2px solid var(--gold);}
   .score-row.meld-row{background:#fafaf8;}
   .score-row.editable-row:hover{background:#f5f3ee;cursor:pointer;}
+  .score-row.draft-row{background:var(--gold-light);border-bottom:1px dashed #e8cc7a;}
+  .draft-tag{color:var(--gold-dark);font-weight:500;animation:draft-pulse 1.4s ease-in-out infinite;}
+  .score-val.draft-val-live{opacity:.6;font-style:italic;}
+  .score-val.draft-val-pending{color:var(--text-light);}
   .round-label{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:var(--text-muted);display:flex;align-items:center;gap:5px;}
   .score-val{font-family:'IBM Plex Mono',monospace;font-size:.92rem;text-align:right;}
   .score-val.negative{color:var(--red);}

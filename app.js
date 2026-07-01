@@ -114,6 +114,7 @@ function subscribeToDrafts(gameId) {
     if (!game) return;
     const entryArea = document.getElementById("entry-area");
     if (entryArea && entryArea.style.display !== "none") applyDraftsToUI(currentDrafts);
+    renderScoreboard();
     if (shouldFinalize(currentDrafts) && !isFinalizingRound) {
       isFinalizingRound = true;
       finalizeRound(currentDrafts).catch(e => { console.error(e); isFinalizingRound = false; });
@@ -670,17 +671,18 @@ function renderScoreboard() {
     <div>Round</div>${headerCells}
   </div>`;
 
-  if (!rounds.length) {
+  if (!rounds.length && !hasDraftRow()) {
     html += `<div class="empty-state"><div class="big">No rounds yet</div>Enter round 1 below</div>`;
   } else {
     const totals = entities.map(() => 0);
     for (const r of rounds) {
       r.breakdowns.forEach((b, i) => totals[i] += b.total);
       html += `<div class="score-row editable-row" style="${gridStyle(n)}" onclick="openEditModal(${r.round - 1})" title="Click to edit">
-        <div class="round-label">R${r.round} <span style="font-size:.6rem;color:var(--gold-dark)">✎</span></div>
+        <div class="round-label">Round ${r.round} <span style="font-size:.6rem;color:var(--gold-dark)">✎</span></div>
         ${r.breakdowns.map(b => `<div class="score-val ${b.total < 0 ? "negative" : ""}">${b.total >= 0 ? "+" : ""}${b.total}</div>`).join("")}
       </div>`;
     }
+    html += renderDraftRow(entities, isTeam);
     const winner = checkWinner(totals, game.target);
     html += `<div class="score-row totals-row" style="${gridStyle(n)}">
       <div class="round-label" style="font-weight:500">Total</div>
@@ -692,6 +694,31 @@ function renderScoreboard() {
     </div>`;
   }
   document.getElementById("scoreboard").innerHTML = html;
+}
+
+// True when at least one entity has an in-progress (uncommitted or committed
+// but not yet finalized) draft for the current round, so the scoreboard can
+// surface a live "(draft)" row before finalizeRound() commits it.
+function hasDraftRow() {
+  if (!game) return false;
+  return game.entities.some((_, ei) => currentDrafts[ei] && currentDrafts[ei].round === game.round);
+}
+
+function renderDraftRow(entities, isTeam) {
+  if (!hasDraftRow()) return "";
+  const n = entities.length;
+  const finalOutPi = computeFinalOutPi(currentDrafts, n);
+  const breakdowns = buildBreakdownsFromDrafts(currentDrafts, entities, game.players, isTeam, finalOutPi);
+  const cells = entities.map((_, ei) => {
+    const d = currentDrafts[ei];
+    if (!d || d.round !== game.round) return `<div class="score-val draft-val-pending">—</div>`;
+    const b = breakdowns[ei];
+    return `<div class="score-val draft-val ${b.total < 0 ? "negative" : ""} ${d.committed ? "" : "draft-val-live"}">${b.total >= 0 ? "+" : ""}${b.total}</div>`;
+  }).join("");
+  return `<div class="score-row draft-row" style="${gridStyle(n)}">
+    <div class="round-label">Round ${game.round} <span class="draft-tag">(draft)</span></div>
+    ${cells}
+  </div>`;
 }
 
 function renderMeldTable() {

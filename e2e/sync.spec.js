@@ -125,6 +125,17 @@ test.describe("round finalization", () => {
     await pageA.fill("#rb-0", "1");
     await pageA.click("#col-0 .btn-success");
 
+    // Before Team 2 saves, both devices should see a live "(draft)" row for
+    // Round 1: Team 1's committed total, Team 2 still pending.
+    await expect(pageA.locator(".score-row.draft-row .round-label")).toContainText("(draft)", { timeout: 8_000 });
+    await expect(pageB.locator(".score-row.draft-row .round-label")).toContainText("(draft)", { timeout: 8_000 });
+    const draftValsA = pageA.locator(".score-row.draft-row .score-val");
+    const draftValsB = pageB.locator(".score-row.draft-row .score-val");
+    await expect(draftValsA.nth(0)).toContainText("500");
+    await expect(draftValsA.nth(1)).toContainText("—");
+    await expect(draftValsB.nth(0)).toContainText("500");
+    await expect(draftValsB.nth(1)).toContainText("—");
+
     // Device B saves Team 2 with 1 black book
     await pageB.fill("#bb-1", "1");
     await pageB.click("#col-1 .btn-success");
@@ -134,8 +145,8 @@ test.describe("round finalization", () => {
     await expect(pageB.locator("#round-header")).toHaveText("Round 2", { timeout: 15_000 });
 
     // Round 1 should appear in both scoreboards
-    await expect(pageA.locator(".round-label").first()).toContainText("R1");
-    await expect(pageB.locator(".round-label").first()).toContainText("R1");
+    await expect(pageA.locator(".round-label").first()).toContainText("Round 1");
+    await expect(pageB.locator(".round-label").first()).toContainText("Round 1");
 
     // Scores should be correct: Team 1 = +500, Team 2 = +300
     const scoresA = pageA.locator(".score-val").filter({ hasNotText: "Total" });
