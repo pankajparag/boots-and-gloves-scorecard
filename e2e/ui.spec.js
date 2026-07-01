@@ -68,3 +68,58 @@ test.describe("score entry", () => {
     await expect(page.locator("#preview-0 .prev-total")).toContainText("+100");
   });
 });
+
+test.describe("keyboard navigation", () => {
+  test("Enter key advances through fields within a column, same as Tab", async ({ page }) => {
+    await startFreshGame(page);
+    await page.click("#rb-0");
+    await expect(page.locator("#rb-0")).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#bb-0")).toBeFocused();
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#pjoker-0")).toBeFocused();
+  });
+
+  test("Enter key skips the disabled spacer field between the leftover cards", async ({ page }) => {
+    await startFreshGame(page);
+    await page.focus("#nred3-0");
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#njoker-0")).toBeFocused();
+  });
+
+  test("Enter key crosses from one entity column into the next", async ({ page }) => {
+    await startFreshGame(page);
+    await page.focus("#nlow-0");
+
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#rb-1")).toBeFocused();
+  });
+
+  test("Enter key does nothing outside score fields (e.g. win-target)", async ({ page }) => {
+    await page.goto("/");
+    await page.focus("#win-target");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#win-target")).toBeFocused();
+  });
+
+  test("Enter key inside the edit modal stays within the modal, not the background grid", async ({ page }) => {
+    await startFreshGame(page);
+    // Finish round 1 so it becomes editable, leaving round 2's entry columns
+    // live in the background — the modal overlays them without removing them.
+    await page.fill("#rb-0", "1");
+    await page.click("#col-0 .btn-success");
+    await page.fill("#bb-1", "1");
+    await page.click("#col-1 .btn-success");
+    await expect(page.locator("#round-header")).toHaveText("Round 2", { timeout: 15_000 });
+
+    await page.click(".editable-row");
+    await expect(page.locator("#edit-modal")).toHaveClass(/open/);
+
+    await page.focus("#medit-rb-0");
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#medit-bb-0")).toBeFocused();
+  });
+});

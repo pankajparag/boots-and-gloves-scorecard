@@ -30,6 +30,29 @@ let localEditTime = {};  // ei → timestamp of last local keystroke
 let localOutTime = 0;    // timestamp of last local "who went out" checkbox change
 let currentDrafts = {};  // latest snapshot from drafts/{id} in Firebase
 
+// ── Enter-to-advance ──────────────────────────────────────────────────────────
+// Numeric keypads have no Tab key, so Enter mimics Tab: move focus to the next
+// score field instead of doing nothing (number inputs have no form to submit).
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Enter") return;
+  const target = e.target;
+  if (!(target instanceof HTMLInputElement) || target.type !== "number") return;
+  if (!target.closest(".score-cols, .modal-field")) return;
+  // Scope to whichever grid the field belongs to — the edit modal overlays
+  // the main entry columns without removing them from the DOM, so a global
+  // query would splice the two separate field sequences together.
+  const scope = target.closest(".modal, #entry-columns");
+  if (!scope) return;
+  e.preventDefault();
+  const fields = Array.from(scope.querySelectorAll("input[type=number]"))
+    .filter(el => !el.disabled && el.offsetParent !== null);
+  const idx = fields.indexOf(target);
+  if (idx === -1) return;
+  const next = fields[(idx + 1) % fields.length];
+  next.focus();
+  next.select();
+});
+
 // ── Firebase sync ─────────────────────────────────────────────────────────────
 function gameRef(id)   { return ref(db, "games/"  + (id || currentGameId)); }
 function draftsRef(id) { return ref(db, "drafts/" + (id || currentGameId)); }
