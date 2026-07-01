@@ -742,7 +742,7 @@ window.openEditModal = function(roundIdx) {
   editingRoundIdx = roundIdx;
   const r = game.rounds[roundIdx];
   document.getElementById("modal-title").textContent = `Edit Round ${r.round}`;
-  document.getElementById("modal-fields").style.gridTemplateColumns = `repeat(${Math.min(game.entities.length, 2)}, minmax(0, 1fr))`;
+  document.getElementById("modal-fields").style.setProperty("--entity-count", Math.min(game.entities.length, 2));
   currentModalOutEi = !game.isTeam && r.outPlayerIdx >= 0 ? game.players[r.outPlayerIdx].entityIdx : -1;
 
   document.getElementById("modal-fields").innerHTML = game.entities.map((e, ei) => {
@@ -891,7 +891,7 @@ function renderEntryColumns() {
   const { entities, players, round, isTeam, submitted } = game;
   document.getElementById("round-header").textContent = `Round ${round}`;
   const cols = document.getElementById("entry-columns");
-  cols.style.gridTemplateColumns = `repeat(${entities.length}, minmax(0, 1fr))`;
+  cols.style.setProperty("--entity-count", entities.length);
   const outPi  = getOutPlayerIdx();
   const outEi  = outPi >= 0 ? players[outPi].entityIdx : -1;
   const totals = getTotals();
