@@ -30,14 +30,26 @@ let localEditTime = {};  // ei → timestamp of last local keystroke
 let localOutTime = 0;    // timestamp of last local "who went out" checkbox change
 let currentDrafts = {};  // latest snapshot from drafts/{id} in Firebase
 
+// A "score field" is any count input in the live entry columns or the round-edit
+// modal — the set the Enter-to-advance behavior below applies to.
+function isScoreField(el) {
+  return el instanceof HTMLInputElement && el.type === "number" &&
+    el.closest(".score-cols, .modal-field");
+}
+
+// A "live" score field is a score field in the current round's entry columns,
+// as opposed to the edit modal, whose fields already hold real saved data
+// from a past round rather than a fresh default — see the focusin listener below.
+function isLiveScoreField(el) {
+  return el instanceof HTMLInputElement && el.type === "number" && el.closest(".score-cols");
+}
+
 // ── Enter-to-advance ──────────────────────────────────────────────────────────
 // Numeric keypads have no Tab key, so Enter mimics Tab: move focus to the next
 // score field instead of doing nothing (number inputs have no form to submit).
 document.addEventListener("keydown", (e) => {
-  if (e.key !== "Enter") return;
+  if (e.key !== "Enter" || !isScoreField(e.target)) return;
   const target = e.target;
-  if (!(target instanceof HTMLInputElement) || target.type !== "number") return;
-  if (!target.closest(".score-cols, .modal-field")) return;
   // Scope to whichever grid the field belongs to — the edit modal overlays
   // the main entry columns without removing them from the DOM, so a global
   // query would splice the two separate field sequences together.
@@ -51,6 +63,16 @@ document.addEventListener("keydown", (e) => {
   const next = fields[(idx + 1) % fields.length];
   next.focus();
   next.select();
+});
+
+// Select-all-on-focus: live entry fields default to "0", so without this the first
+// keystroke lands next to the existing digit instead of replacing it (e.g.
+// typing "2" yields "02" or "20" depending on cursor position). Scoped to the
+// live scoreboard only — edit-modal fields already hold real saved data, and
+// selecting it all on focus would wipe a correct value on the first keystroke
+// when the user only meant to nudge one wrong count.
+document.addEventListener("focusin", (e) => {
+  if (isLiveScoreField(e.target)) e.target.select();
 });
 
 // ── Firebase sync ─────────────────────────────────────────────────────────────

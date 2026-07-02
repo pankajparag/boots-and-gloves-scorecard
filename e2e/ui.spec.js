@@ -96,6 +96,38 @@ test.describe("navigation highlight", () => {
   });
 });
 
+test.describe("select-all on focus", () => {
+  test("focusing a score field selects its default '0' so typing replaces it", async ({ page }) => {
+    await startFreshGame(page);
+    await page.click("#rb-0");
+    await page.keyboard.type("2");
+    await expect(page.locator("#rb-0")).toHaveValue("2");
+  });
+
+  test("focusing a field inside the edit modal preserves its saved value, unlike the live scoreboard", async ({ page }) => {
+    // Edit-modal fields hold real data from an already-saved round, not a fresh
+    // "0" default, so select-all-on-focus is intentionally scoped to the live
+    // scoreboard only (see the `isLiveScoreField` check in app.js) — typing here
+    // should insert at the click position rather than replace the whole value.
+    await startFreshGame(page);
+    await page.fill("#rb-0", "12");
+    await page.click("#col-0 .btn-success");
+    await page.check("#out-2");
+    await page.fill("#bb-1", "1");
+    await page.click("#col-1 .btn-success");
+    await expect(page.locator("#round-header")).toHaveText("Round 2", { timeout: 15_000 });
+
+    await page.click(".editable-row");
+    await expect(page.locator("#edit-modal")).toHaveClass(/open/);
+
+    await page.click("#medit-rb-0");
+    await page.keyboard.type("5");
+    const value = await page.locator("#medit-rb-0").inputValue();
+    expect(value).not.toBe("5");
+    expect(value.length).toBe(3);
+  });
+});
+
 test.describe("keyboard navigation", () => {
   test("Enter key advances through fields within a column, same as Tab", async ({ page }) => {
     await startFreshGame(page);
