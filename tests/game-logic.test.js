@@ -3,7 +3,7 @@ import {
   MELD_IND, MELD_TEAM,
   getBrackets, getMeld, getBracketIndex,
   isTeamMode, calcTotal,
-  checkWinner, buildGame
+  checkWinner, buildGame, getForehandPlayerIdx
 } from "../game-logic.js";
 
 // ── isTeamMode ────────────────────────────────────────────────────────────────
@@ -12,6 +12,33 @@ describe("isTeamMode", () => {
   it("returns true for team3v3", () => expect(isTeamMode("team3v3")).toBe(true));
   it("returns false for ind3",   () => expect(isTeamMode("ind3")).toBe(false));
   it("returns false for unknown",() => expect(isTeamMode("custom")).toBe(false));
+});
+
+// ── getForehandPlayerIdx ────────────────────────────────────────────────────────
+describe("getForehandPlayerIdx", () => {
+  it("round 1 defaults to player 0", () => {
+    expect(getForehandPlayerIdx(1, [])).toBe(0);
+  });
+
+  it("uses the outPlayerIdx from the immediately preceding round", () => {
+    const rounds = [{ round: 1, outPlayerIdx: 2 }];
+    expect(getForehandPlayerIdx(2, rounds)).toBe(2);
+  });
+
+  it("falls back to an earlier round if the immediately preceding one has no recorded winner", () => {
+    const rounds = [{ round: 1, outPlayerIdx: 1 }, { round: 2, outPlayerIdx: -1 }];
+    expect(getForehandPlayerIdx(3, rounds)).toBe(1);
+  });
+
+  it("defaults to player 0 if no round has ever recorded a winner", () => {
+    const rounds = [{ round: 1, outPlayerIdx: -1 }, { round: 2, outPlayerIdx: -1 }];
+    expect(getForehandPlayerIdx(3, rounds)).toBe(0);
+  });
+
+  it("ignores rounds at or after the target round", () => {
+    const rounds = [{ round: 1, outPlayerIdx: 0 }, { round: 5, outPlayerIdx: 2 }];
+    expect(getForehandPlayerIdx(2, rounds)).toBe(0);
+  });
 });
 
 // ── getBrackets ───────────────────────────────────────────────────────────────

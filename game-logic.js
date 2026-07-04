@@ -34,6 +34,17 @@ export function getBracketIndex(score, isTeam) {
 
 export function isTeamMode(m) { return m === "team2v2" || m === "team3v3"; }
 
+// Player index who opens (leads) a given round: the first player at game
+// start, then whoever went out in the most recent prior round with a
+// recorded winner — see "Going Out" in the rules, the winner leads next.
+export function getForehandPlayerIdx(roundNum, rounds) {
+  for (let r = roundNum - 1; r >= 1; r--) {
+    const round = rounds.find(x => x.round === r);
+    if (round && round.outPlayerIdx >= 0) return round.outPlayerIdx;
+  }
+  return 0;
+}
+
 // nlow covers 9–3 (including black 3, which is the same −5 value)
 // nred3 is separate at −500
 export function calcTotal(b, isIndWinner) {

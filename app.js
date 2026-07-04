@@ -4,7 +4,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import {
   getBrackets, getMeld, getBracketIndex, isTeamMode, calcTotal, checkWinner, buildGame,
-  canFinalize, allCommitted, hasExactlyOneWentOut, computeFinalOutPi, buildBreakdownsFromDrafts
+  canFinalize, allCommitted, hasExactlyOneWentOut, computeFinalOutPi, buildBreakdownsFromDrafts,
+  getForehandPlayerIdx
 } from "./game-logic.js";
 
 // ── Firebase paths ────────────────────────────────────────────────────────────
@@ -387,6 +388,16 @@ function getDealerInfo(roundNum) {
   }
 }
 
+// Who opens (leads) the round — the first player at game start, then
+// whoever went out last. Unlike the dealer this can't be predicted ahead of
+// the current round, since it depends on an outcome that hasn't happened yet.
+function getForehandInfo(roundNum) {
+  if (!game) return null;
+  const pi = getForehandPlayerIdx(roundNum, game.rounds);
+  const p = game.players[pi];
+  return p ? { entityIdx: p.entityIdx, playerName: p.name } : null;
+}
+
 // Default names for a fresh game. User renames via the players bar.
 function defaultPlayerNames(mode) {
   return ({
@@ -558,12 +569,16 @@ function renderPlayersBar() {
   const dl = document.getElementById("preset-names");
   if (dl) dl.innerHTML = PRESET_NAMES.filter(n => !used.has(n)).map(n => `<option value="${n}">`).join("");
 
-  const currentDealer = getDealerInfo(game.round);
-  const nextDealer    = getDealerInfo(game.round + 1);
+  const currentDealer   = getDealerInfo(game.round);
+  const nextDealer      = getDealerInfo(game.round + 1);
+  const currentForehand = getForehandInfo(game.round);
   const dealerBlockHtml = `<div id="pbar-dealer-block" class="pbar-dealer-block">
     <div class="pbar-dealer-round" id="pbar-dealer-round">Round ${game.round}</div>
-    ${currentDealer ? `<div class="pbar-dealer-current">🃏 <strong>${esc(currentDealer.playerName)}</strong></div>` : ""}
-    ${nextDealer    ? `<div class="pbar-dealer-next">Next: <strong>${esc(nextDealer.playerName)}</strong></div>` : ""}
+    <div class="pbar-role-row">
+      ${currentDealer    ? `<div class="pbar-dealer-current" title="Dealing">🃏 <strong>${esc(currentDealer.playerName)}</strong></div>` : ""}
+      ${currentForehand  ? `<div class="pbar-forehand-current" title="Opens the round">▶️ <strong>${esc(currentForehand.playerName)}</strong></div>` : ""}
+    </div>
+    ${nextDealer    ? `<div class="pbar-dealer-next">Next deal: <strong>${esc(nextDealer.playerName)}</strong></div>` : ""}
   </div>`;
 
   if (game.isTeam) {
@@ -659,7 +674,8 @@ function patchOpenModal() {
 // Patch entry column headers and labels after a name change without resetting score inputs.
 function patchEntryColumnHeaders() {
   if (!game) return;
-  const dealer = getDealerInfo(game.round);
+  const dealer   = getDealerInfo(game.round);
+  const forehand = getForehandInfo(game.round);
   game.entities.forEach((e, ei) => {
     const col = document.getElementById(`col-${ei}`);
     if (!col) return;
@@ -681,17 +697,24 @@ function patchEntryColumnHeaders() {
     if (dealerEl && dealer && dealer.entityIdx === ei) {
       dealerEl.textContent = `🃏 Dealing: ${dealer.playerName}`;
     }
+    const forehandEl = col.querySelector('.forehand-badge');
+    if (forehandEl && forehand && forehand.entityIdx === ei) {
+      forehandEl.textContent = `▶️ Opens: ${forehand.playerName}`;
+    }
   });
   const dealerBlock = document.getElementById("pbar-dealer-block");
   if (dealerBlock) {
     const roundEl = document.getElementById("pbar-dealer-round");
     if (roundEl) roundEl.textContent = `Round ${game.round}`;
-    const currentDealer = getDealerInfo(game.round);
-    const nextDealer    = getDealerInfo(game.round + 1);
+    const currentDealer   = getDealerInfo(game.round);
+    const nextDealer      = getDealerInfo(game.round + 1);
+    const currentForehand = getForehandInfo(game.round);
     const currentEl = dealerBlock.querySelector(".pbar-dealer-current strong");
     if (currentEl && currentDealer) currentEl.textContent = currentDealer.playerName;
     const nextEl = dealerBlock.querySelector(".pbar-dealer-next strong");
     if (nextEl && nextDealer) nextEl.textContent = nextDealer.playerName;
+    const forehandEl = dealerBlock.querySelector(".pbar-forehand-current strong");
+    if (forehandEl && currentForehand) forehandEl.textContent = currentForehand.playerName;
   }
 }
 
@@ -937,8 +960,9 @@ function renderEntryColumns() {
   cols.style.setProperty("--entity-count", entities.length);
   const outPi  = getOutPlayerIdx();
   const outEi  = outPi >= 0 ? players[outPi].entityIdx : -1;
-  const totals = getTotals();
-  const dealer = getDealerInfo(round);
+  const totals   = getTotals();
+  const dealer   = getDealerInfo(round);
+  const forehand = getForehandInfo(round);
 
   cols.innerHTML = entities.map((e, ei) => {
     const isSaved    = submitted.includes(ei);
@@ -948,12 +972,16 @@ function renderEntryColumns() {
     const isIndWinner = !isTeam && ei === outEi;
     const d          = isSaved ? "disabled" : "";
     const isDealer   = dealer && dealer.entityIdx === ei;
+    const isForehand = forehand && forehand.entityIdx === ei;
 
     const teamPlayersHtml = e.players
       ? `<div class="col-players">${e.players.map(esc).join(" · ")}</div>`
       : "";
     const dealerHtml = isDealer
       ? `<div class="dealer-badge">🃏 Dealing: ${esc(dealer.playerName)}</div>`
+      : "";
+    const forehandHtml = isForehand
+      ? `<div class="forehand-badge">▶️ Opens: ${esc(forehand.playerName)}</div>`
       : "";
 
     // Stays enabled even once this entity is saved — see markEntitySaved for why.
@@ -994,10 +1022,11 @@ function renderEntryColumns() {
       : `<button class="btn btn-success" style="width:100%" onclick="commitEntity(${ei})">✓ Save — ${esc(e.name)}</button>`;
 
     return `<div class="entity-col ${isSaved ? "col-saved" : ""}" id="col-${ei}">
-      <div class="entity-col-header ${isDealer ? "header-dealer" : ""}">
+      <div class="entity-col-header ${isDealer ? "header-dealer" : ""} ${isForehand ? "header-forehand" : ""}">
         <div class="col-name-row">${entityDotHtml(ei, e.name)}<div class="col-name">${esc(e.name)}</div></div>
         ${teamPlayersHtml}
         ${dealerHtml}
+        ${forehandHtml}
       </div>
       <div class="entity-col-body">
         ${wentOutHtml}<div class="score-cols">${posColHtml}${negColHtml}</div>${previewHtml}
