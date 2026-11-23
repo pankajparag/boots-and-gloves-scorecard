@@ -194,6 +194,62 @@ test.describe("round finalization", () => {
   });
 });
 
+test.describe("who went out", () => {
+  test("a save racing a 'went out' tick on another device still finalizes", async ({ browser }) => {
+    // Regression: "went out" used to be copied into every team's draft. Saving
+    // a column before another device's tick arrived recorded "nobody went out"
+    // for that team, the copies never agreed, and the round never finished.
+    const ctxA = await browser.newContext();
+    const pageA = await ctxA.newPage();
+    await startFreshGame(pageA);
+    await waitForSync(pageA);
+    const ctxB = await browser.newContext();
+    const pageB = await joinGame(ctxB);
+
+    await pageA.fill("#rb-0", "1");
+    await pageA.click("#col-0 .btn-success");
+    await expect(pageB.locator("#col-0")).toHaveClass(/col-saved/, { timeout: 8_000 });
+
+    // A ticks who went out while B saves Team 2 at the same moment.
+    await Promise.all([pageA.check("#out-0"), pageB.click("#col-1 .btn-success")]);
+
+    await expect(pageA.locator("#round-header")).toHaveText("Round 2", { timeout: 15_000 });
+    await expect(pageB.locator("#round-header")).toHaveText("Round 2", { timeout: 15_000 });
+    await ctxA.close();
+    await ctxB.close();
+  });
+
+  test("ticking 'went out' doesn't undo another device's save or scores", async ({ browser }) => {
+    // Regression: ticking used to rewrite every team's draft from this
+    // device's screen 400 ms later, clobbering a save or scores entered
+    // elsewhere in the meantime.
+    const ctxA = await browser.newContext();
+    const pageA = await ctxA.newPage();
+    await startFreshGame(pageA);
+    await waitForSync(pageA);
+    const ctxB = await browser.newContext();
+    const pageB = await joinGame(ctxB);
+
+    await Promise.all([
+      pageA.check("#out-0"),
+      (async () => { await pageB.fill("#bb-1", "2"); await pageB.click("#col-1 .btn-success"); })(),
+    ]);
+    await pageA.waitForTimeout(1_500);  // past the old 400 ms rewrite
+
+    await expect(pageA.locator("#col-1")).toHaveClass(/col-saved/, { timeout: 8_000 });
+    await expect(pageA.locator("#bb-1")).toHaveValue("2");
+    await expect(pageB.locator("#col-1")).toHaveClass(/col-saved/);
+
+    // And the round still completes once Team 1 saves.
+    await pageA.click("#col-0 .btn-success");
+    await expect(pageB.locator("#round-header")).toHaveText("Round 2", { timeout: 15_000 });
+    const scores = pageB.locator(".score-val");
+    await expect(scores.nth(1)).toContainText("600");
+    await ctxA.close();
+    await ctxB.close();
+  });
+});
+
 test.describe("game reset", () => {
   test("a fresh start on another device clears the winner banner here", async ({ browser }) => {
     // Regression: a device showing the winner banner kept it (and kept score

@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   canFinalize,
   allCommitted,
-  hasExactlyOneWentOut,
-  computeFinalOutPi,
+  outPiForRound,
+  splitDrafts,
   buildBreakdownsFromDrafts,
 } from "../game-logic.js";
 
@@ -56,129 +56,126 @@ describe("allCommitted", () => {
   });
 });
 
-// ── hasExactlyOneWentOut ───────────────────────────────────────────────────────
-describe("hasExactlyOneWentOut", () => {
-  it("returns false when nobody is recorded as going out", () => {
-    const drafts = { 0: { outPi: -1 }, 1: { outPi: -1 } };
-    expect(hasExactlyOneWentOut(drafts, 2)).toBe(false);
+// ── outPiForRound ─────────────────────────────────────────────────────────────
+describe("outPiForRound", () => {
+  it("returns the recorded player for the current round", () => {
+    expect(outPiForRound({ pi: 2, round: 3 }, 3)).toBe(2);
   });
 
-  it("returns true when every entity agrees on the same player", () => {
-    const drafts = { 0: { outPi: 0 }, 1: { outPi: 0 } };
-    expect(hasExactlyOneWentOut(drafts, 2)).toBe(true);
+  it("returns -1 when nothing is recorded", () => {
+    expect(outPiForRound(null, 3)).toBe(-1);
+    expect(outPiForRound(undefined, 3)).toBe(-1);
   });
 
-  it("returns false when entities disagree on who went out", () => {
-    const drafts = { 0: { outPi: 0 }, 1: { outPi: 2 } };
-    expect(hasExactlyOneWentOut(drafts, 2)).toBe(false);
+  it("returns -1 when the record belongs to another round (stale)", () => {
+    expect(outPiForRound({ pi: 2, round: 2 }, 3)).toBe(-1);
   });
 
-  it("treats a missing draft as outPi = -1", () => {
-    const drafts = { 0: { outPi: 0 } };
-    expect(hasExactlyOneWentOut(drafts, 2)).toBe(false);
+  it("returns -1 when the record was cleared (pi = -1)", () => {
+    expect(outPiForRound({ pi: -1, round: 3 }, 3)).toBe(-1);
+  });
+
+  it("treats player 0 as a real player, not 'nobody'", () => {
+    expect(outPiForRound({ pi: 0, round: 1 }, 1)).toBe(0);
+  });
+});
+
+// ── splitDrafts ───────────────────────────────────────────────────────────────
+describe("splitDrafts", () => {
+  it("separates entity drafts from the shared out record", () => {
+    const raw = { 0: { rb: 1 }, 1: { bb: 2 }, out: { pi: 1, round: 4 } };
+    expect(splitDrafts(raw)).toEqual({
+      entities: { 0: { rb: 1 }, 1: { bb: 2 } },
+      out: { pi: 1, round: 4 },
+    });
+  });
+
+  it("handles Firebase returning entity drafts as an array", () => {
+    const { entities, out } = splitDrafts([{ rb: 1 }, { bb: 2 }]);
+    expect(entities[0]).toEqual({ rb: 1 });
+    expect(entities[1]).toEqual({ bb: 2 });
+    expect(out).toBe(null);
+  });
+
+  it("skips holes in a sparse array", () => {
+    const { entities } = splitDrafts([undefined, { bb: 2 }]);
+    expect(entities[0]).toBeUndefined();
+    expect(entities[1]).toEqual({ bb: 2 });
+  });
+
+  it("returns empty results for null / missing data", () => {
+    expect(splitDrafts(null)).toEqual({ entities: {}, out: null });
+    expect(splitDrafts(undefined)).toEqual({ entities: {}, out: null });
+  });
+
+  it("ignores keys that are neither entity indices nor 'out'", () => {
+    const { entities } = splitDrafts({ 0: { rb: 1 }, junk: { x: 1 } });
+    expect(Object.keys(entities)).toEqual(["0"]);
   });
 });
 
 // ── canFinalize ───────────────────────────────────────────────────────────────
 describe("canFinalize", () => {
   const round = 3;
+  const bothSaved = {
+    0: { committed: true, round: 3 },
+    1: { committed: true, round: 3 },
+  };
 
-  it("returns true when all entities committed and exactly one player went out", () => {
-    const drafts = {
-      0: { committed: true, round: 3, outPi: 0 },
-      1: { committed: true, round: 3, outPi: 0 },
-    };
-    expect(canFinalize(drafts, round, 2)).toBe(true);
+  it("returns true when all entities committed and a player went out this round", () => {
+    expect(canFinalize(bothSaved, { pi: 0, round: 3 }, round, 2)).toBe(true);
   });
 
   it("returns false when all committed but nobody went out", () => {
-    const drafts = {
-      0: { committed: true, round: 3, outPi: -1 },
-      1: { committed: true, round: 3, outPi: -1 },
-    };
-    expect(canFinalize(drafts, round, 2)).toBe(false);
+    expect(canFinalize(bothSaved, null, round, 2)).toBe(false);
+    expect(canFinalize(bothSaved, { pi: -1, round: 3 }, round, 2)).toBe(false);
   });
 
-  it("returns false when all committed but entities disagree on who went out", () => {
+  it("returns false when the out record is from a previous round", () => {
+    expect(canFinalize(bothSaved, { pi: 0, round: 2 }, round, 2)).toBe(false);
+  });
+
+  it("does not depend on what each entity's draft says about who went out", () => {
+    // Regression: "went out" used to be copied into every entity draft, and a
+    // save racing a tick on another device left the copies disagreeing forever.
     const drafts = {
       0: { committed: true, round: 3, outPi: 0 },
-      1: { committed: true, round: 3, outPi: 1 },
+      1: { committed: true, round: 3, outPi: -1 },
     };
-    expect(canFinalize(drafts, round, 2)).toBe(false);
+    expect(canFinalize(drafts, { pi: 0, round: 3 }, round, 2)).toBe(true);
   });
 
   it("returns false when one entity is not yet committed", () => {
     const drafts = {
-      0: { committed: true,  round: 3, outPi: 0 },
-      1: { committed: false, round: 3, outPi: 0 },
+      0: { committed: true,  round: 3 },
+      1: { committed: false, round: 3 },
     };
-    expect(canFinalize(drafts, round, 2)).toBe(false);
+    expect(canFinalize(drafts, { pi: 0, round: 3 }, round, 2)).toBe(false);
   });
 
   it("returns false when one entity draft is missing entirely", () => {
-    const drafts = {
-      0: { committed: true, round: 3, outPi: 0 },
-    };
-    expect(canFinalize(drafts, round, 2)).toBe(false);
+    expect(canFinalize({ 0: { committed: true, round: 3 } }, { pi: 0, round: 3 }, round, 2)).toBe(false);
   });
 
   it("returns false when a draft belongs to a different round (stale)", () => {
     const drafts = {
-      0: { committed: true, round: 2, outPi: 0 },  // stale
-      1: { committed: true, round: 3, outPi: 0 },
+      0: { committed: true, round: 2 },  // stale
+      1: { committed: true, round: 3 },
     };
-    expect(canFinalize(drafts, round, 2)).toBe(false);
+    expect(canFinalize(drafts, { pi: 0, round: 3 }, round, 2)).toBe(false);
   });
 
   it("returns false for empty drafts", () => {
-    expect(canFinalize({}, round, 2)).toBe(false);
+    expect(canFinalize({}, { pi: 0, round: 3 }, round, 2)).toBe(false);
   });
 
   it("works for 3-entity game (team3v3 or ind3)", () => {
     const drafts = {
-      0: { committed: true, round: 1, outPi: 2 },
-      1: { committed: true, round: 1, outPi: 2 },
-      2: { committed: true, round: 1, outPi: 2 },
+      0: { committed: true, round: 1 },
+      1: { committed: true, round: 1 },
+      2: { committed: true, round: 1 },
     };
-    expect(canFinalize(drafts, 1, 3)).toBe(true);
-  });
-});
-
-// ── computeFinalOutPi ─────────────────────────────────────────────────────────
-describe("computeFinalOutPi", () => {
-  it("returns -1 when no entity has outPi set", () => {
-    const drafts = {
-      0: { outPi: -1 },
-      1: { outPi: -1 },
-    };
-    expect(computeFinalOutPi(drafts, 2)).toBe(-1);
-  });
-
-  it("returns the outPi from the entity that went out", () => {
-    const drafts = {
-      0: { outPi: 0 },
-      1: { outPi: -1 },
-    };
-    expect(computeFinalOutPi(drafts, 2)).toBe(0);
-  });
-
-  it("last non-(-1) value wins when multiple entities claim outPi", () => {
-    // Should not happen in a real game but the function should be deterministic
-    const drafts = {
-      0: { outPi: 0 },
-      1: { outPi: 2 },
-    };
-    expect(computeFinalOutPi(drafts, 2)).toBe(2);
-  });
-
-  it("returns -1 when drafts are empty", () => {
-    expect(computeFinalOutPi({}, 2)).toBe(-1);
-  });
-
-  it("handles missing entity drafts gracefully", () => {
-    // entity 1 draft missing — treat as outPi = -1
-    const drafts = { 0: { outPi: 1 } };
-    expect(computeFinalOutPi(drafts, 2)).toBe(1);
+    expect(canFinalize(drafts, { pi: 2, round: 1 }, 1, 3)).toBe(true);
   });
 });
 

@@ -4,9 +4,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import {
   getBrackets, getMeld, getBracketIndex, isTeamMode, calcTotal, checkWinner, buildGame,
-  canFinalize, allCommitted, hasExactlyOneWentOut, computeFinalOutPi, buildBreakdownsFromDrafts,
+  canFinalize, allCommitted, outPiForRound, splitDrafts, buildBreakdownsFromDrafts,
   getForehandPlayerIdx
-} from "./game-logic.js";
+} from "./game-logic.js?v=11";
 
 // ── Firebase paths ────────────────────────────────────────────────────────────
 const FIXED_GAME_IDS = {
@@ -23,13 +23,13 @@ let currentGameId = null;
 let currentGameCode = null;
 let syncUnsubscribe = null;
 let draftsUnsubscribe = null;
-let isRemoteUpdate = false;
 let isFinalizingRound = false;
 let renameTimer = null;
 let draftTimers = {};    // ei → debounce timer for live draft push
 let localEditTime = {};  // ei → timestamp of last local keystroke
 let localOutTime = 0;    // timestamp of last local "who went out" checkbox change
-let currentDrafts = {};  // latest snapshot from drafts/{id} in Firebase
+let currentDrafts = {};  // latest per-entity score drafts from drafts/{id}
+let currentOut = null;   // latest shared "who went out" record, drafts/{id}/out = { pi, round }
 let boardSeq = 0;          // bumped whenever the board being watched changes
 let boardId = null;        // game path the board on screen belongs to (and listens to)
 let syncDropdownOnLoad = true; // false once the user picks "custom" while a board is loading
@@ -127,7 +127,6 @@ function subscribeToFirebase(gameId, loading = false) {
   subscribeToDrafts(gameId);
   let first = loading;
   syncUnsubscribe = onValue(gameRef(gameId), snapshot => {
-    if (isRemoteUpdate && !first) return;  // echo of our own write
     const data = snapshot.val();
     if (first) {
       first = false;
@@ -142,14 +141,16 @@ function subscribeToFirebase(gameId, loading = false) {
     // New game, reset, or new round: redraw from scratch (resets this device's
     // saved-column state and the winner banner / entry area).
     if (!game || data.round !== game.round || (data.gameId || gameId) !== game.gameId) {
-      currentDrafts = {};
+      currentDrafts = {}; currentOut = null;
       showGame(data, gameId);
       return;
     }
     // Same round (rename, past-round edit): keep this device's saved columns.
     const next = normalizeGame(data, game.submitted, game.pending);
-    // Nothing changed (e.g. the server echoing what's already shown): don't
-    // redraw — that would wipe score inputs typed but not yet sent as drafts.
+    // Nothing changed — typically the echo of this device's own write, or the
+    // server repeating what's shown. Don't redraw: that would wipe score inputs
+    // typed but not yet sent as drafts. (This replaces an "ignore everything
+    // while I'm writing" flag that also dropped other devices' real updates.)
     if (stableJson(gamePayload(next)) === stableJson(gamePayload(game))) return;
     game = next;
     currentGameId   = data.gameId   || gameId;
@@ -167,7 +168,7 @@ function subscribeToFirebase(gameId, loading = false) {
 function subscribeToDrafts(gameId) {
   if (draftsUnsubscribe) { draftsUnsubscribe(); draftsUnsubscribe = null; }
   draftsUnsubscribe = onValue(ref(db, "drafts/" + gameId), snapshot => {
-    currentDrafts = snapshot.val() || {};
+    ({ entities: currentDrafts, out: currentOut } = splitDrafts(snapshot.val()));
     if (!game) return;
     const entryArea = document.getElementById("entry-area");
     if (entryArea && entryArea.style.display !== "none") applyDraftsToUI(currentDrafts);
@@ -175,7 +176,7 @@ function subscribeToDrafts(gameId) {
     updateFinalizeWarning(currentDrafts);
     if (shouldFinalize(currentDrafts) && !isFinalizingRound) {
       isFinalizingRound = true;
-      finalizeRound(currentDrafts).catch(e => { console.error(e); isFinalizingRound = false; });
+      finalizeRound(currentDrafts, roundOutPi()).catch(e => { console.error(e); isFinalizingRound = false; });
     }
   });
 }
@@ -183,10 +184,21 @@ function subscribeToDrafts(gameId) {
 async function pushDraft(ei, committed = false) {
   if (!currentGameId || !game) return;
   const b = readBreakdownFromDOM(ei);
-  const outPi = getOutPlayerIdx();
   try {
-    await set(ref(db, "drafts/" + currentGameId + "/" + ei), { ...b, outPi, committed, round: game.round });
+    await set(ref(db, "drafts/" + currentGameId + "/" + ei), { ...b, committed, round: game.round });
   } catch (e) { console.error("Draft push error:", e); }
+}
+
+// "Who went out" for the current round, from the shared drafts/{id}/out record.
+function roundOutPi() {
+  return game ? outPiForRound(currentOut, game.round) : -1;
+}
+
+async function pushOut() {
+  if (!currentGameId || !game) return;
+  try {
+    await set(ref(db, "drafts/" + currentGameId + "/out"), { pi: getOutPlayerIdx(), round: game.round });
+  } catch (e) { console.error("Went-out push error:", e); }
 }
 
 function scheduleDraftPush(ei) {
@@ -236,27 +248,19 @@ function applyDraftsToUI(drafts) {
     }
   });
 
-  // Sync "who went out" from remote drafts if the user hasn't touched it locally in the last 2 s
-  let remoteOutPi = -1;
-  let hasDraft = false;
-  Object.keys(drafts).forEach(eiStr => {
-    const d = drafts[eiStr];
-    if (d && d.round === game.round) { hasDraft = true; if (d.outPi >= 0) remoteOutPi = d.outPi; }
-  });
-  if (hasDraft && remoteOutPi !== getOutPlayerIdx() && Date.now() - localOutTime >= 2000) {
+  // Sync "who went out" from the shared record, unless the user touched it here in the last 2 s
+  const remoteOutPi = roundOutPi();
+  if (currentOut && currentOut.round === game.round &&
+      remoteOutPi !== getOutPlayerIdx() && Date.now() - localOutTime >= 2000) {
     applyOutPiToUI(remoteOutPi);
   }
 
-  // If any committed draft has a player going out, lock "who went out" for all other entities
-  let wentOutEntityIdx = -1;
-  Object.keys(drafts).forEach(eiStr => {
-    const d = drafts[eiStr];
-    if (d && d.committed && d.outPi >= 0 && d.round === game.round) {
-      const p = game.players[d.outPi];
-      if (p) wentOutEntityIdx = p.entityIdx;
-    }
-  });
-  if (wentOutEntityIdx >= 0) disableWentOutForOthers(wentOutEntityIdx);
+  // Once the team that went out has saved, lock "who went out" for everyone else
+  const outPlayer = remoteOutPi >= 0 ? game.players[remoteOutPi] : null;
+  const outDraft  = outPlayer ? drafts[outPlayer.entityIdx] : null;
+  if (outDraft && outDraft.committed && outDraft.round === game.round) {
+    disableWentOutForOthers(outPlayer.entityIdx);
+  }
 }
 
 function markEntitySaved(ei) {
@@ -272,30 +276,27 @@ function markEntitySaved(ei) {
   if (btn) { btn.className = "btn btn-saved"; btn.disabled = true; btn.textContent = `✓ Saved — ${game.entities[ei].name}`; }
   DRAFT_FIELDS.forEach(f => { const inp = document.getElementById(`${f}-${ei}`); if (inp) inp.disabled = true; });
   // "Went out" checkboxes stay enabled after save (unless disableWentOutForOthers
-  // locks them once a winner is confirmed) — otherwise an entity saved before
-  // anyone is marked as going out would freeze its draft's outPi at -1 forever,
-  // deadlocking canFinalize's hasExactlyOneWentOut check.
+  // locks them once the team that went out has saved), so the winner can still
+  // be picked after every column is saved.
   updateColPreview(ei);
 }
 
 function shouldFinalize(drafts) {
   if (!game) return false;
-  return canFinalize(drafts, game.round, game.entities.length);
+  return canFinalize(drafts, currentOut, game.round, game.entities.length);
 }
 
-// Surfaces a banner once every entity has saved but no single player is
-// recorded as having gone out yet, so the round doesn't stall silently.
+// Surfaces a banner once every entity has saved but nobody is recorded as
+// having gone out yet, so the round doesn't stall silently.
 function updateFinalizeWarning(drafts) {
   const el = document.getElementById("finalize-warning");
   if (!el || !game) return;
-  const stuck = allCommitted(drafts, game.round, game.entities.length)
-    && !hasExactlyOneWentOut(drafts, game.entities.length);
+  const stuck = allCommitted(drafts, game.round, game.entities.length) && roundOutPi() < 0;
   el.style.display = stuck ? "" : "none";
 }
 
-async function finalizeRound(drafts) {
+async function finalizeRound(drafts, finalOutPi) {
   if (!game || !currentGameId) return;
-  const finalOutPi  = computeFinalOutPi(drafts, game.entities.length);
   const breakdowns  = buildBreakdownsFromDrafts(drafts, game.entities, game.players, game.isTeam, finalOutPi);
 
   game.rounds.push({ round: game.round, outPlayerIdx: finalOutPi, breakdowns });
@@ -304,13 +305,12 @@ async function finalizeRound(drafts) {
   game.pending   = {};
   localEditTime  = {};
   localOutTime   = 0;
-  currentDrafts  = {};
+  currentDrafts  = {}; currentOut = null;
 
   // Pin the game being finalized: the user may switch boards during the awaits.
   const id = currentGameId, g = game;
   try {
     await set(draftsRef(id), null);
-    isRemoteUpdate = true;
     try {
       setStatus("syncing");
       await set(gameRef(id), gamePayload(g));
@@ -318,8 +318,6 @@ async function finalizeRound(drafts) {
     } catch (e) {
       setStatus("error");
       console.error("Firebase write error:", e);
-    } finally {
-      isRemoteUpdate = false;
     }
     if (game !== g) return;  // a different board is on screen now
     renderBoard();
@@ -611,9 +609,7 @@ function scheduleRenameSync() {
   renameTimer = setTimeout(async () => {
     renameTimer = null;
     if (!game) return;
-    isRemoteUpdate = true;
     await pushToFirebase();
-    isRemoteUpdate = false;
   }, 600);
 }
 
@@ -764,7 +760,7 @@ function hasDraftRow() {
 function renderDraftRow(entities, isTeam) {
   if (!hasDraftRow()) return "";
   const n = entities.length;
-  const finalOutPi = computeFinalOutPi(currentDrafts, n);
+  const finalOutPi = roundOutPi();
   const breakdowns = buildBreakdownsFromDrafts(currentDrafts, entities, game.players, isTeam, finalOutPi);
   const cells = entities.map((_, ei) => {
     const d = currentDrafts[ei];
@@ -936,9 +932,7 @@ window.saveEdit = async function() {
     r.breakdowns[ei] = b;
   });
   closeModal();
-  isRemoteUpdate = true;
   await pushToFirebase();
-  isRemoteUpdate = false;
   renderScoreboard();
   renderMeldTable();
 };
@@ -1066,13 +1060,7 @@ window.onOutChange = function(clickedPi) {
   });
   localOutTime = Date.now();
   applyOutPiToUI(getOutPlayerIdx());
-  game.entities.forEach((_, ei) => {
-    // Already-committed entities must still get the new outPi immediately
-    // (preserving their committed:true), or their draft stays stuck at a
-    // stale value and hasExactlyOneWentOut can never agree.
-    if (game.submitted.includes(ei)) pushDraft(ei, true);
-    else scheduleDraftPush(ei);
-  });
+  pushOut();
 };
 
 function readBreakdownFromDOM(ei) {
@@ -1134,7 +1122,7 @@ function renderAll() {
     // After re-rendering columns, restore current draft values (clears localEditTime so
     // all values are re-applied, recovering from the input reset that renderEntryColumns causes).
     localEditTime = {};
-    if (Object.keys(currentDrafts).length > 0) applyDraftsToUI(currentDrafts);
+    if (Object.keys(currentDrafts).length > 0 || currentOut) applyDraftsToUI(currentDrafts);
   }
 }
 
@@ -1155,7 +1143,7 @@ function normalizeGame(data, submitted = [], pending = {}) {
 function stopListening() {
   if (syncUnsubscribe)   { syncUnsubscribe();   syncUnsubscribe = null; }
   if (draftsUnsubscribe) { draftsUnsubscribe(); draftsUnsubscribe = null; }
-  currentDrafts = {};
+  currentDrafts = {}; currentOut = null;
   localEditTime = {};
 }
 
@@ -1270,7 +1258,7 @@ function watchBoard(gameId, data) {
   boardSeq++;
   flushPendingWrites();
   if (syncUnsubscribe || draftsUnsubscribe) stopListening();
-  currentDrafts = {};
+  currentDrafts = {}; currentOut = null;
   localEditTime = {};
   if (data) {
     syncDropdownOnLoad = true;

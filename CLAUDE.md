@@ -55,15 +55,16 @@ Two Firebase paths are used:
 
 - `games/bnag-{code}/` — finalized game state (rounds, scores, players). Written once per round when all entities commit.
 - `drafts/bnag-{code}/{ei}` — live in-progress scores per entity. Written on every keystroke (debounced 400 ms) and cleared when a round finalizes.
+- `drafts/bnag-{code}/out` — `{ pi, round }`, the single shared "who went out" record for the round (see `outPiForRound` / `splitDrafts` in `game-logic.js`). Kept out of the per-entity drafts so ticking it never rewrites any team's scores.
 
-All connected clients subscribe to both paths via `onValue()`. The `isRemoteUpdate` flag prevents the write-echo loop on the main game path.
+All connected clients subscribe to both paths via `onValue()`. A board is loaded from the first snapshot of a fresh listener (never `get()`, which answers from a live listener's possibly stale cache). Game-path snapshots identical to what's shown — including the echo of this device's own writes — are skipped (`stableJson` comparison) so they don't redraw and wipe typed input. When the page resumes after being hidden, `requestReconnect()` forces a fresh connection because suspended tabs often keep a dead WebSocket.
 
 **Scoring flow (multi-device):**
 
 1. Each entity column has its own Save button (`commitEntity(ei)`).
 2. As scores are typed, `scheduleDraftPush(ei)` debounces a write to `drafts/.../ei` so all devices see live values.
 3. Clicking Save pushes a `committed: true` draft and marks the column disabled locally; other devices see the column lock immediately.
-4. When all entity drafts are `committed` **and** every draft agrees on the same non-negative `outPi` (exactly one player recorded as going out — see `hasExactlyOneWentOut` in `game-logic.js`), any client that detects this calls `finalizeRound()`: breakdowns are built from draft data, `game.rounds` gets a new entry, `game.round` increments, drafts are cleared, and the main game state is pushed. Checking "who went out" pushes the selection to every entity's draft immediately, including already-committed ones, so an entity saved before a winner is picked doesn't freeze at a stale `outPi`.
+4. When all entity drafts are `committed` **and** the shared `out` record names a player for the current round (`canFinalize` in `game-logic.js`), any client that detects this calls `finalizeRound()`: breakdowns are built from draft data, `game.rounds` gets a new entry, `game.round` increments, drafts (including `out`) are cleared, and the main game state is pushed. Checking "who went out" writes only `drafts/.../out`, so it can be picked before or after the columns are saved.
 5. Editing a past round opens a modal (`openEditModal`), which on save overwrites that round's `breakdowns` in place and re-pushes.
 
 **Firebase rules requirement:**

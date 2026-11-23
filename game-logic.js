@@ -72,29 +72,35 @@ export function allCommitted(drafts, currentRound, entityCount) {
   return true;
 }
 
-// Returns true when exactly one player is recorded as having gone out —
-// every entity draft must agree on the same non-negative outPi.
-export function hasExactlyOneWentOut(drafts, entityCount) {
-  const outPis = new Set();
-  for (let ei = 0; ei < entityCount; ei++) outPis.add(drafts[ei]?.outPi ?? -1);
-  return outPis.size === 1 && !outPis.has(-1);
+// "Who went out" is stored once per round at drafts/{game}/out as
+// { pi, round } — separate from the per-entity score drafts, so ticking it never
+// rewrites any team's scores and there are no per-entity copies to disagree.
+// Returns that player index for `currentRound`, or -1 if none is recorded.
+export function outPiForRound(out, currentRound) {
+  return out && out.round === currentRound && Number.isInteger(out.pi) && out.pi >= 0 ? out.pi : -1;
 }
 
-// Round can only finalize once all entities are committed AND exactly one
-// player has been recorded as going out (a round always ends by someone
-// going out — see "Going Out" in the rules).
-export function canFinalize(drafts, currentRound, entityCount) {
-  return allCommitted(drafts, currentRound, entityCount)
-    && hasExactlyOneWentOut(drafts, entityCount);
-}
-
-// Finds the outPi (player index) across all entity drafts; -1 if nobody went out.
-export function computeFinalOutPi(drafts, entityCount) {
-  let finalOutPi = -1;
-  for (let ei = 0; ei < entityCount; ei++) {
-    if ((drafts[ei]?.outPi ?? -1) >= 0) finalOutPi = drafts[ei].outPi;
+// Splits a drafts/{game} snapshot value into the per-entity score drafts
+// (keyed by entity index) and the shared "who went out" record. Firebase may
+// return the value as an array when only numeric keys are present.
+export function splitDrafts(raw) {
+  const entities = {};
+  let out = null;
+  if (raw && typeof raw === "object") {
+    for (const k of Object.keys(raw)) {
+      if (k === "out") out = raw.out || null;
+      else if (/^\d+$/.test(k) && raw[k]) entities[k] = raw[k];
+    }
   }
-  return finalOutPi;
+  return { entities, out };
+}
+
+// Round can only finalize once all entities are committed AND a player has
+// been recorded as going out this round (a round always ends by someone going
+// out — see "Going Out" in the rules).
+export function canFinalize(drafts, out, currentRound, entityCount) {
+  return allCommitted(drafts, currentRound, entityCount)
+    && outPiForRound(out, currentRound) >= 0;
 }
 
 // Converts entity drafts into finalized breakdown objects ready for game.rounds.
