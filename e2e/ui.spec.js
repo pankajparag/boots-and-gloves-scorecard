@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { startFreshGame, testCode } from "./helpers.js";
+import { startFreshGame, testCode, waitForOwnGame } from "./helpers.js";
 
 test.describe("page load", () => {
   test("header and game mode selector are visible", async ({ page }) => {
@@ -84,15 +84,34 @@ test.describe("navigation highlight", () => {
     await page.selectOption("#custom-mode", "ind3");
     await page.fill("#custom-game-id", testCode());
     await page.click("button:has-text('Start / Reset game')");
-    await page.waitForSelector(".entity-col", { timeout: 15_000 });
+    await waitForOwnGame(page);
 
     // Reload so the game is restored from Firebase via the auto-restore path,
     // not freshly started via onModeChange (which already highlighted correctly).
     await page.reload();
-    await page.waitForSelector(".entity-col", { timeout: 15_000 });
+    await waitForOwnGame(page);
 
     await expect(page.locator("#link-ind3")).toHaveClass(/active/);
     await expect(page.locator("#link-team2v2")).not.toHaveClass(/active/);
+  });
+
+  test("game mode dropdown matches the restored game after a reload", async ({ page }) => {
+    // Regression: the dropdown was hardcoded to "Team 2v2" on load while the
+    // restored board could be a different game, so the two disagreed.
+    page.on("dialog", dialog => dialog.accept());
+    await page.goto("/");
+    await page.selectOption("#game-mode", "custom");
+    await page.selectOption("#custom-mode", "ind3");
+    await page.fill("#custom-game-id", testCode());
+    await page.click("button:has-text('Start / Reset game')");
+    await waitForOwnGame(page);
+
+    await page.reload();
+    await waitForOwnGame(page);
+
+    await expect(page.locator("#game-mode")).toHaveValue("custom");
+    await expect(page.locator("#custom-mode")).toHaveValue("ind3");
+    await expect(page.locator("#custom-game-id")).toHaveValue(testCode());
   });
 });
 

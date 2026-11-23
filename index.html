@@ -28,7 +28,7 @@
 <div class="setup-panel">
   <div>
     <label>Game mode</label>
-    <select id="game-mode" onchange="onModeChange()">
+    <select id="game-mode" autocomplete="off" onchange="onModeChange()">
       <option value="team2v2" selected>Team — 2 v 2</option>
       <option value="team3v3">Team — 3 v 3</option>
       <option value="ind3">Individual — 3 players</option>
@@ -40,7 +40,7 @@
   <div id="custom-game-row" style="display:none;gap:0.75rem;align-items:flex-end;flex-wrap:wrap">
     <div>
       <label>Layout</label>
-      <select id="custom-mode" onchange="onCustomModeChange()">
+      <select id="custom-mode" autocomplete="off" onchange="onCustomModeChange()">
         <option value="team2v2">Team 2v2</option>
         <option value="team3v3">Team 3v3</option>
         <option value="ind3">Individual 3P</option>
@@ -223,6 +223,6 @@
   <option value="Abhishek">
   <option value="Gaurav">
 </datalist>
-<script type="module" src="app.js?v=9"></script>
+<script type="module" src="app.js?v=10"></script>
 </body>
 </html>

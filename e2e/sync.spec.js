@@ -13,7 +13,7 @@
  * If the path is blocked these tests are skipped automatically with a clear message.
  */
 import { test, expect } from "@playwright/test";
-import { startFreshGame, joinGame, waitForSync } from "./helpers.js";
+import { startFreshGame, joinGame, waitForSync, waitForOwnGame, testCode } from "./helpers.js";
 
 // Detect whether the Firebase "drafts/" path is accessible before running any
 // sync test — skip the whole suite with a helpful message if not.
@@ -188,6 +188,51 @@ test.describe("round finalization", () => {
 
     await expect(pageA.locator("#round-header")).toHaveText("Round 2", { timeout: 15_000 });
     await expect(pageB.locator("#round-header")).toHaveText("Round 2", { timeout: 15_000 });
+
+    await ctxA.close();
+    await ctxB.close();
+  });
+});
+
+test.describe("game reset", () => {
+  test("a fresh start on another device clears the winner banner here", async ({ browser }) => {
+    // Regression: a device showing the winner banner kept it (and kept score
+    // entry hidden) when another device started a fresh game on the same code.
+    const ctxA = await browser.newContext();
+    const pageA = await ctxA.newPage();
+    pageA.on("dialog", d => d.accept());
+    await pageA.goto("/");
+    await pageA.selectOption("#game-mode", "custom");
+    await pageA.selectOption("#custom-mode", "team2v2");
+    await pageA.fill("#custom-game-id", testCode());
+    await pageA.fill("#win-target", "1000");
+    await pageA.click("button:has-text('Start / Reset game')");
+    await waitForOwnGame(pageA);
+    await waitForSync(pageA);
+
+    const ctxB = await browser.newContext();
+    const pageB = await joinGame(ctxB);
+    pageB.on("dialog", d => d.accept());
+
+    // Team 1 scores 3 red books (1500) and goes out: over the 1000 target.
+    await pageA.check("#out-0");
+    await pageA.fill("#rb-0", "3");
+    await pageA.click("#col-0 .btn-success");
+    // Let A's "went out" pick reach B first, or B's save would record nobody out.
+    await expect(pageB.locator("#out-0")).toBeChecked({ timeout: 8_000 });
+    await pageB.click("#col-1 .btn-success");
+
+    await expect(pageA.locator("#winner-banner")).toHaveClass(/visible/, { timeout: 15_000 });
+    await expect(pageB.locator("#winner-banner")).toHaveClass(/visible/, { timeout: 15_000 });
+
+    // Device B starts the same scorecard fresh ("OK = start fresh").
+    await pageB.click("button:has-text('Start / Reset game')");
+    await expect(pageB.locator("#round-header")).toHaveText("Round 1", { timeout: 15_000 });
+
+    // Device A follows without a reload: banner gone, score entry back.
+    await expect(pageA.locator("#winner-banner")).not.toHaveClass(/visible/, { timeout: 15_000 });
+    await expect(pageA.locator("#entry-area")).toBeVisible();
+    await expect(pageA.locator("#round-header")).toHaveText("Round 1");
 
     await ctxA.close();
     await ctxB.close();

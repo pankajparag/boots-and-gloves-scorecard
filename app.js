@@ -1,6 +1,6 @@
 import { db } from "./firebase-config.js";
 import {
-  ref, set, onValue, get
+  ref, set, onValue, get, goOffline, goOnline
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import {
   getBrackets, getMeld, getBracketIndex, isTeamMode, calcTotal, checkWinner, buildGame,
@@ -30,6 +30,14 @@ let draftTimers = {};    // ei → debounce timer for live draft push
 let localEditTime = {};  // ei → timestamp of last local keystroke
 let localOutTime = 0;    // timestamp of last local "who went out" checkbox change
 let currentDrafts = {};  // latest snapshot from drafts/{id} in Firebase
+let boardSeq = 0;          // bumped whenever the board being watched changes
+let boardId = null;        // game path the board on screen belongs to (and listens to)
+let syncDropdownOnLoad = true; // false once the user picks "custom" while a board is loading
+let isConnected = false;   // from .info/connected
+let statusState = "syncing";
+let reconnectEpoch = 0;    // bumped on each forced reconnect
+let reconnectTimer = null;
+let hiddenAt = 0;
 
 // A "score field" is any count input in the live entry columns or the round-edit
 // modal — the set the Enter-to-advance behavior below applies to.
@@ -80,19 +88,26 @@ document.addEventListener("focusin", (e) => {
 function gameRef(id)   { return ref(db, "games/"  + (id || currentGameId)); }
 function draftsRef(id) { return ref(db, "drafts/" + (id || currentGameId)); }
 
+// JSON with sorted keys and null/undefined dropped, matching how Firebase stores
+// data, so a local object and its round-tripped snapshot compare equal.
+function stableJson(v) {
+  if (Array.isArray(v)) return "[" + v.map(stableJson).join(",") + "]";
+  if (v && typeof v === "object") {
+    return "{" + Object.keys(v).sort().filter(k => v[k] != null)
+      .map(k => JSON.stringify(k) + ":" + stableJson(v[k])).join(",") + "}";
+  }
+  return JSON.stringify(v);
+}
+
+// The part of `game` stored in Firebase (submitted/pending are per-device).
+function gamePayload(g) {
+  const { mode, isTeam, target, gameId, gameCode, players, entities, rounds, round } = g;
+  return { mode, isTeam, target, gameId, gameCode, players, entities, rounds, round };
+}
+
 async function pushToFirebase() {
   if (!currentGameId) return;
-  const payload = {
-    mode:     game.mode,
-    isTeam:   game.isTeam,
-    target:   game.target,
-    gameId:   game.gameId,
-    gameCode: game.gameCode,
-    players:  game.players,
-    entities: game.entities,
-    rounds:   game.rounds,
-    round:    game.round
-  };
+  const payload = gamePayload(game);
   try {
     setStatus("syncing");
     await set(gameRef(), payload);
@@ -103,23 +118,42 @@ async function pushToFirebase() {
   }
 }
 
-function subscribeToFirebase(gameId) {
+// Listen to a game. With `loading` set, the first snapshot is the load result:
+// it puts the board on screen (and lines the dropdown up with it). A fresh
+// listener always gets its first snapshot from the server, never a stale cache.
+function subscribeToFirebase(gameId, loading = false) {
   if (syncUnsubscribe) { syncUnsubscribe(); syncUnsubscribe = null; }
+  boardId = gameId;
   subscribeToDrafts(gameId);
-  const path = gameRef(gameId);
-  syncUnsubscribe = onValue(path, snapshot => {
-    if (isRemoteUpdate) return;
+  let first = loading;
+  syncUnsubscribe = onValue(gameRef(gameId), snapshot => {
+    if (isRemoteUpdate && !first) return;  // echo of our own write
     const data = snapshot.val();
-    if (!data) { setStatus("synced"); return; }
-    if (!game) { setStatus("synced"); return; }
-    const roundChanged = data.round !== game.round;
-    if (roundChanged) { currentDrafts = {}; localEditTime = {}; }
-    const sub = roundChanged ? [] : (game.submitted || []);
-    const pen = roundChanged ? {} : (game.pending   || {});
-    game = { ...data, rounds: toArray(data.rounds), entities: toArray(data.entities), players: toArray(data.players), submitted: sub, pending: pen };
+    if (first) {
+      first = false;
+      displayGame(gameId, data, syncDropdownOnLoad);
+      setStatus("synced");
+      return;
+    }
+    setStatus("synced");
+    // Game deleted / not started: show the empty state but keep listening, so a
+    // game started on another device appears here without a reload.
+    if (!data) { if (game) showNoGame(); return; }
+    // New game, reset, or new round: redraw from scratch (resets this device's
+    // saved-column state and the winner banner / entry area).
+    if (!game || data.round !== game.round || (data.gameId || gameId) !== game.gameId) {
+      currentDrafts = {};
+      showGame(data, gameId);
+      return;
+    }
+    // Same round (rename, past-round edit): keep this device's saved columns.
+    const next = normalizeGame(data, game.submitted, game.pending);
+    // Nothing changed (e.g. the server echoing what's already shown): don't
+    // redraw — that would wipe score inputs typed but not yet sent as drafts.
+    if (stableJson(gamePayload(next)) === stableJson(gamePayload(game))) return;
+    game = next;
     currentGameId   = data.gameId   || gameId;
     currentGameCode = data.gameCode || "";
-    setStatus("synced");
     updateGameCodeDisplay();
     renderAll();
     renderPlayersBar();
@@ -159,6 +193,7 @@ function scheduleDraftPush(ei) {
   localEditTime[ei] = Date.now();
   clearTimeout(draftTimers[ei]);
   draftTimers[ei] = setTimeout(() => {
+    draftTimers[ei] = null;
     if (game && !game.submitted.includes(ei)) pushDraft(ei, false);
   }, 400);
 }
@@ -271,38 +306,42 @@ async function finalizeRound(drafts) {
   localOutTime   = 0;
   currentDrafts  = {};
 
+  // Pin the game being finalized: the user may switch boards during the awaits.
+  const id = currentGameId, g = game;
   try {
-    await set(draftsRef(), null);
-    const totals = getTotals();
-    const winner = checkWinner(totals, game.target);
+    await set(draftsRef(id), null);
     isRemoteUpdate = true;
-    await pushToFirebase();
-    isRemoteUpdate = false;
-    if (winner >= 0) {
-      document.getElementById("winner-banner").textContent =
-        `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
-      document.getElementById("winner-banner").classList.add("visible");
-      document.getElementById("entry-area").style.display = "none";
-    } else {
-      renderEntryColumns();
+    try {
+      setStatus("syncing");
+      await set(gameRef(id), gamePayload(g));
+      setStatus("synced");
+    } catch (e) {
+      setStatus("error");
+      console.error("Firebase write error:", e);
+    } finally {
+      isRemoteUpdate = false;
     }
-    renderScoreboard();
-    renderMeldTable();
-    renderPlayersBar();
+    if (game !== g) return;  // a different board is on screen now
+    renderBoard();
     window.scrollTo(0, 0);
   } finally {
     isFinalizingRound = false;
   }
 }
 
+// Remembers the last operation's result; the badge shows it, except that
+// "connecting…" overrides a healthy state while the socket is down.
 function setStatus(state) {
+  if (state) statusState = state;
+  state = statusState;
   const el = document.getElementById("sync-status");
   if (!el) return;
+  if (state !== "error" && !isConnected) state = "offline";
   const s = {
     synced:  { text: "● synced",     color: "#1a6b3a" },
     syncing: { text: "○ syncing…",   color: "#9a7410" },
     error:   { text: "✕ sync error", color: "#c0392b" },
-  }[state] || { text: "◌ offline", color: "#6b6b80" };
+  }[state] || { text: "◌ connecting…", color: "#6b6b80" };
   el.textContent = s.text;
   el.style.color = s.color;
 }
@@ -415,52 +454,14 @@ window.onModeChange = async function() {
   document.getElementById("win-target").value = isTeamMode(effectiveMode) ? 10000 : 6000;
   document.getElementById("custom-game-row").style.display = isCustom ? "flex" : "none";
   highlightActiveLink(mode);
-  if (!isCustom) {
-    const fixed = FIXED_GAME_IDS[mode];
-    if (!fixed) return;
-    try {
-      const snapshot = await get(gameRef(fixed.id));
-      if (snapshot.exists()) {
-        const data = snapshot.val();
-        if (data.target) document.getElementById("win-target").value = data.target;
-        if (syncUnsubscribe) { syncUnsubscribe(); syncUnsubscribe = null; }
-        game = { ...data, rounds: toArray(data.rounds), entities: toArray(data.entities), players: toArray(data.players), submitted: [], pending: {} };
-        currentGameId   = fixed.id;
-        currentGameCode = fixed.code;
-        localStorage.setItem("bnag-lastGameId",   fixed.id);
-        localStorage.setItem("bnag-lastGameCode", fixed.code);
-        updateGameCodeDisplay();
-        subscribeToFirebase(fixed.id);
-        const totals = getTotals();
-        const winner  = checkWinner(totals, game.target);
-        document.getElementById("winner-banner").classList.remove("visible");
-        document.getElementById("entry-area").style.display = "none";
-        if (winner >= 0) {
-          document.getElementById("winner-banner").textContent =
-            `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
-          document.getElementById("winner-banner").classList.add("visible");
-          renderScoreboard();
-          renderMeldTable();
-        } else {
-          document.getElementById("entry-area").style.display = "block";
-          renderAll();
-        }
-        renderPlayersBar();
-      } else {
-        if (syncUnsubscribe) { syncUnsubscribe(); syncUnsubscribe = null; }
-        game = null;
-        currentGameId   = null;
-        currentGameCode = null;
-        updateGameCodeDisplay();
-        document.getElementById("winner-banner").classList.remove("visible");
-        document.getElementById("entry-area").style.display = "none";
-        document.getElementById("scoreboard").innerHTML =
-          `<div class="empty-state"><div class="big">No game in progress</div>Set up players above and click Start</div>`;
-        document.getElementById("meld-table-wrap").innerHTML = "";
-        renderPlayersBar();
-      }
-    } catch (e) { /* offline — ignore */ }
+  if (isCustom) {
+    // The current board stays on screen and live until Start; a board still
+    // loading must not flip the dropdown away from what the user is setting up.
+    syncDropdownOnLoad = false;
+    return;
   }
+  const fixed = FIXED_GAME_IDS[mode];
+  if (fixed) loadGame(fixed.id);
 };
 
 window.onCustomModeChange = function() {
@@ -498,18 +499,22 @@ window.startGame = async function() {
     gameCode = fixed.code;
   }
 
-  currentGameId   = gameId;
-  currentGameCode = gameCode;
+  const seq = ++boardSeq;
+  const stillCurrent = () => seq === boardSeq;  // false if the user switched boards meanwhile
   setStatus("syncing");
 
+  // Read fresh: a stale cached "no game here" would let us silently overwrite
+  // a game another device started.
   let snapshot;
   try {
-    snapshot = await get(gameRef(gameId));
+    snapshot = await fetchFresh(gameId);
   } catch (e) {
+    if (!stillCurrent()) return;
     setStatus("error");
     alert("Could not connect to Firebase. Check your connection.");
     return;
   }
+  if (!stillCurrent()) return;
 
   if (snapshot.exists()) {
     const existing = snapshot.val();
@@ -517,41 +522,29 @@ window.startGame = async function() {
       `A game "${gameCode}" already exists (Round ${existing.round}, players: ${toArray(existing.players).map(p => p.name).join(", ")}).\n\nCancel = resume existing · OK = start fresh`
     );
     if (!resume) {
-      game = { ...existing, rounds: toArray(existing.rounds), entities: toArray(existing.entities), players: toArray(existing.players), submitted: [], pending: {} };
-      localStorage.setItem("bnag-lastGameId",   gameId);
-      localStorage.setItem("bnag-lastGameCode", gameCode);
-      subscribeToFirebase(gameId);
-      document.getElementById("winner-banner").classList.remove("visible");
-      document.getElementById("entry-area").style.display = "block";
-      updateGameCodeDisplay();
-      renderAll();
-      renderPlayersBar();
+      watchBoard(gameId, existing);
       return;
     }
   }
 
-  game = buildGame(effectiveMode, target, defaultPlayerNames(effectiveMode), gameId, gameCode);
-  document.getElementById("winner-banner").classList.remove("visible");
-  document.getElementById("entry-area").style.display = "block";
-  updateGameCodeDisplay();
-
-  localStorage.setItem("bnag-lastGameId",   gameId);
-  localStorage.setItem("bnag-lastGameCode", gameCode);
-
-  // Clear stale drafts from any previous game at this path before writing fresh state
-  currentDrafts = {};
-  localEditTime = {};
+  flushPendingWrites();
+  const fresh = buildGame(effectiveMode, target, defaultPlayerNames(effectiveMode), gameId, gameCode);
+  // Clear stale drafts from any previous game at this path before writing fresh state.
   // Silently ignore permission errors — if the Firebase rules don't yet include
   // the drafts path the game start should still succeed.
   try { await set(draftsRef(gameId), null); } catch (_) {}
-
-  isRemoteUpdate = true;
-  await pushToFirebase();
-  isRemoteUpdate = false;
-
-  subscribeToFirebase(gameId);
-  renderAll();
-  renderPlayersBar();
+  if (!stillCurrent()) return;
+  try {
+    await set(gameRef(gameId), gamePayload(fresh));
+  } catch (e) {
+    if (!stillCurrent()) return;
+    setStatus("error");
+    console.error("Firebase write error:", e);
+    alert("Could not start the game. Check your connection.");
+    return;
+  }
+  if (!stillCurrent()) return;
+  watchBoard(gameId, fresh);
 };
 
 // ── players bar ───────────────────────────────────────────────────────────────
@@ -616,6 +609,7 @@ function renderPlayersBar() {
 function scheduleRenameSync() {
   clearTimeout(renameTimer);
   renameTimer = setTimeout(async () => {
+    renameTimer = null;
     if (!game) return;
     isRemoteUpdate = true;
     await pushToFirebase();
@@ -1144,40 +1138,187 @@ function renderAll() {
   }
 }
 
-// ── init ──────────────────────────────────────────────────────────────────────
-highlightActiveLink("team2v2");
+// ── loading / showing a game ──────────────────────────────────────────────────
 
-// On page load, restore the last active game from Firebase if one was saved
-(async () => {
-  const savedId   = localStorage.getItem("bnag-lastGameId");
-  const savedCode = localStorage.getItem("bnag-lastGameCode");
-  if (!savedId) return;
-  currentGameId   = savedId;
-  currentGameCode = savedCode || "";
-  setStatus("syncing");
-  try {
-    const snapshot = await get(gameRef(savedId));
-    if (!snapshot.exists()) { setStatus("synced"); return; }
-    const data = snapshot.val();
-    game = { ...data, rounds: toArray(data.rounds), entities: toArray(data.entities), players: toArray(data.players), submitted: [], pending: {} };
-    updateGameCodeDisplay();
-    highlightActiveLink(game.mode);
-    subscribeToFirebase(savedId);
-    const totals = getTotals();
-    const winner = checkWinner(totals, game.target);
-    if (winner >= 0) {
-      document.getElementById("winner-banner").textContent =
-        `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
-      document.getElementById("winner-banner").classList.add("visible");
-      renderScoreboard();
-      renderMeldTable();
-    } else {
-      document.getElementById("entry-area").style.display = "block";
-      renderAll();
-    }
-    renderPlayersBar();
-  } catch (e) {
-    setStatus("error");
-    console.error("Auto-restore error:", e);
+// Turn a Firebase snapshot value into the in-app `game` shape.
+function normalizeGame(data, submitted = [], pending = {}) {
+  return {
+    ...data,
+    rounds:   toArray(data.rounds),
+    entities: toArray(data.entities),
+    players:  toArray(data.players),
+    submitted: submitted || [],
+    pending:   pending   || {}
+  };
+}
+
+function stopListening() {
+  if (syncUnsubscribe)   { syncUnsubscribe();   syncUnsubscribe = null; }
+  if (draftsUnsubscribe) { draftsUnsubscribe(); draftsUnsubscribe = null; }
+  currentDrafts = {};
+  localEditTime = {};
+}
+
+// Send debounced writes now, while `game`, currentGameId and the score inputs
+// still belong to the board being left — otherwise they fire later against
+// whatever board is on screen by then.
+function flushPendingWrites() {
+  for (const ei of Object.keys(draftTimers)) {
+    if (draftTimers[ei] == null) continue;
+    clearTimeout(draftTimers[ei]);
+    draftTimers[ei] = null;
+    if (game && !game.submitted.includes(+ei)) pushDraft(+ei, false);
   }
-})();
+  if (renameTimer != null) {
+    clearTimeout(renameTimer);
+    renameTimer = null;
+    if (game) pushToFirebase();
+  }
+}
+
+// Read a game straight from the server (for Start's "already exists?" check).
+// get() answers from the cache while a listener is active on the same path, so
+// if that's the board on screen, its listeners are dropped first and the board
+// re-watched afterwards. A get() cut off by a forced reconnect is retried once.
+async function fetchFresh(gameId) {
+  const onScreen = gameId === boardId;
+  if (onScreen) stopListening();
+  try {
+    for (let attempt = 0; ; attempt++) {
+      const epoch = reconnectEpoch;
+      try {
+        return await get(gameRef(gameId));
+      } catch (e) {
+        if (attempt === 0 && epoch !== reconnectEpoch) continue;
+        throw e;
+      }
+    }
+  } finally {
+    // Re-attach unless something else has taken over the listeners meanwhile.
+    if (onScreen && !syncUnsubscribe && boardId === gameId) subscribeToFirebase(gameId);
+  }
+}
+
+// Keep the setup fields (game mode dropdown, custom name/layout, win target)
+// in step with the board actually displayed.
+function syncModeSelect(gameId, data) {
+  const fixedMode = Object.keys(FIXED_GAME_IDS).find(k => FIXED_GAME_IDS[k].id === gameId);
+  if (data && data.target) document.getElementById("win-target").value = data.target;
+  document.getElementById("game-mode").value = fixedMode || "custom";
+  document.getElementById("custom-game-row").style.display = fixedMode ? "none" : "flex";
+  if (!fixedMode) {
+    if (data && data.mode) document.getElementById("custom-mode").value = data.mode;
+    document.getElementById("custom-game-id").value = (data && data.gameCode) || gameId.replace(/^bnag-/, "");
+  }
+  highlightActiveLink(fixedMode || (data && data.mode));
+}
+
+// Put a freshly loaded board on screen: remember it, optionally line the
+// dropdown up with it, and render the game (or "No game in progress").
+function displayGame(gameId, data, syncDropdown = true) {
+  localStorage.setItem("bnag-lastGameId",   gameId);
+  localStorage.setItem("bnag-lastGameCode", (data && data.gameCode) || gameId.replace(/^bnag-/, ""));
+  if (syncDropdown) syncModeSelect(gameId, data);
+  else highlightActiveLink(data && data.mode);
+  if (data) showGame(data, gameId); else showNoGame();
+}
+
+// Winner banner / entry area / tables for the current `game`.
+function renderBoard() {
+  const totals = getTotals();
+  const winner = checkWinner(totals, game.target);
+  const banner = document.getElementById("winner-banner");
+  if (winner >= 0) {
+    banner.textContent = `🎉 ${game.entities[winner].name} wins with ${totals[winner].toLocaleString()} points!`;
+    banner.classList.add("visible");
+  } else {
+    banner.classList.remove("visible");
+  }
+  document.getElementById("entry-area").style.display = winner >= 0 ? "none" : "block";
+  renderAll();
+  renderPlayersBar();
+}
+
+function showGame(data, gameId) {
+  game = normalizeGame(data);
+  currentGameId   = data.gameId   || gameId;
+  currentGameCode = data.gameCode || gameId.replace(/^bnag-/, "");
+  updateGameCodeDisplay();
+  renderBoard();
+}
+
+function showEmpty(message) {
+  game = null;
+  currentGameId   = null;
+  currentGameCode = null;
+  updateGameCodeDisplay();
+  document.getElementById("winner-banner").classList.remove("visible");
+  document.getElementById("entry-area").style.display = "none";
+  document.getElementById("scoreboard").innerHTML = message;
+  document.getElementById("meld-table-wrap").innerHTML = "";
+  renderPlayersBar();
+}
+function showNoGame() {
+  showEmpty(`<div class="empty-state"><div class="big">No game in progress</div>Set up players above and click Start</div>`);
+}
+
+// Switch the screen to another board. With `data` (Start / resume) it's shown
+// right away; otherwise the board shows "Loading…" until the listener's first
+// snapshot arrives from the server — so it's never stale, and the old board
+// never lingers under a dropdown that no longer matches it.
+function watchBoard(gameId, data) {
+  boardSeq++;
+  flushPendingWrites();
+  if (syncUnsubscribe || draftsUnsubscribe) stopListening();
+  currentDrafts = {};
+  localEditTime = {};
+  if (data) {
+    syncDropdownOnLoad = true;
+    displayGame(gameId, data);
+    subscribeToFirebase(gameId);
+    setStatus("synced");
+  } else {
+    showEmpty(`<div class="empty-state"><div class="big">Loading…</div></div>`);
+    setStatus("syncing");
+    subscribeToFirebase(gameId, true);
+  }
+}
+
+function loadGame(gameId) {
+  syncDropdownOnLoad = true;
+  watchBoard(gameId);
+}
+
+// ── connection health ─────────────────────────────────────────────────────────
+onValue(ref(db, ".info/connected"), snap => {
+  isConnected = snap.val() === true;
+  setStatus();  // re-render the badge without overwriting the last result
+});
+
+// After a phone/browser suspends the tab, the WebSocket is often dead but the
+// SDK doesn't notice for a long time, so listeners keep showing stale data.
+// Force a fresh connection; listeners then re-sync with the server. Debounced
+// so one wake-up ('online' + 'visibilitychange' + 'pageshow') reconnects once.
+function requestReconnect() {
+  clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(() => {
+    reconnectEpoch++;
+    goOffline(db);
+    goOnline(db);
+  }, 300);
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") { hiddenAt = Date.now(); return; }
+  if (hiddenAt && Date.now() - hiddenAt > 30_000) requestReconnect();
+  hiddenAt = 0;
+});
+window.addEventListener("pageshow", e => { if (e.persisted) requestReconnect(); });
+window.addEventListener("online", requestReconnect);
+
+// ── init ──────────────────────────────────────────────────────────────────────
+// Restore the last board viewed; otherwise the default dropdown selection.
+{
+  const savedId = localStorage.getItem("bnag-lastGameId");
+  const fallback = FIXED_GAME_IDS[document.getElementById("game-mode").value] || FIXED_GAME_IDS.team2v2;
+  loadGame(savedId || fallback.id);
+}

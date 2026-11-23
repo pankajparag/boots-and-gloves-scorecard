@@ -31,8 +31,19 @@ export async function startFreshGame(page) {
   await page.selectOption("#custom-mode", "team2v2");
   await page.fill("#custom-game-id", testCode());
   await page.click("button:has-text('Start / Reset game')");
+  await waitForOwnGame(page);
+}
 
-  // Entry columns appear once the game is written to Firebase and rendered
+/**
+ * Waits until this test's own game is on screen. The page first shows the
+ * default board on load, so ".entity-col" alone could match that board.
+ */
+export async function waitForOwnGame(page) {
+  await page.waitForFunction(
+    code => document.getElementById("game-code-display")?.textContent === code,
+    testCode(),
+    { timeout: 15_000 }
+  );
   await page.waitForSelector(".entity-col", { timeout: 15_000 });
 }
 
@@ -49,6 +60,8 @@ export async function joinGame(context) {
     localStorage.setItem("bnag-lastGameCode", code);
   }, { id: "bnag-" + code, code });
   await page.goto("/");
+  await page.waitForFunction(
+    c => document.getElementById("game-code-display")?.textContent === c, code, { timeout: 15_000 });
   await page.waitForSelector(".entity-col", { timeout: 15_000 });
   return page;
 }
